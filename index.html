@@ -1,0 +1,1023 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>【テスト版】売上アップ・ノート</title>
+<meta name="theme-color" content="#c0392b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="売上ノートTEST">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+/* 片手で使う縦一列のノート。日向夏イエローの「次の一手」だけを主役にし、他は日向灘ブルーで静かにまとめる。ネットなしで動くよう、書体は端末内のものだけを使う */
+:root{
+  --paper:#edf1ee;--card:#ffffff;--ink:#172233;--sub:#5a6575;--line:#d6ddd9;
+  --sea:#1d5b86;--sea-2:#2f77a8;--sea-soft:#a9c5d9;--sea-wash:#e3eef5;--on-sea:#ffffff;
+  --sun:#f3c623;--sun-ink:#2c2300;--sun-wash:#fdf3c9;--sun-line:#d29a00;
+  --ember:#c4432b;--ember-wash:#fde3dc;--leaf:#2c7a4b;--leaf-wash:#e2f1e7;
+  --shadow:0 1px 0 rgba(23,34,51,.04),0 6px 20px -12px rgba(23,34,51,.25);--scrim:rgba(15,20,28,.45);
+  --font:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;
+  --r-xl:22px;--r-l:16px;--r-m:12px;--r-s:8px;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0f141c;--card:#182030;--ink:#e8edf3;--sub:#99a5b5;--line:#2a3447;
+  --sea:#6fb0de;--sea-2:#8cc3ea;--sea-soft:#355772;--sea-wash:#1b2b3d;--on-sea:#0f141c;
+  --sun:#f3c623;--sun-ink:#2c2300;--sun-wash:#3a3313;--sun-line:#f3c623;
+  --ember:#f07a62;--ember-wash:#3c201a;--leaf:#62cb8c;--leaf-wash:#183326;
+  --shadow:0 0 0 1px rgba(255,255,255,.03);--scrim:rgba(0,0,0,.6);color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);line-height:1.6;font-family:var(--font);font-size:15px;font-feature-settings:"palt";
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+h1,h2,h3{text-wrap:balance}
+table,.stat b,.kv b,.big{font-variant-numeric:tabular-nums}
+a{color:var(--sea)}
+:focus-visible{outline:3px solid var(--sea-2);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:18px 14px}
+.top .shop{font-size:13px;color:var(--sub);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.top h1{margin:0;font-size:25px;font-weight:800;letter-spacing:-.01em;line-height:1.25}
+.saved{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--leaf-wash);color:var(--leaf);font-weight:700;transition:background .3s}
+.saved.pulse{background:var(--sun)}
+.saved.demo{background:var(--sun);color:var(--sun-ink)}
+.iconbtn{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--card);color:var(--ink);border:1px solid var(--line);text-decoration:none;flex:none}
+.back{display:inline-flex;align-items:center;gap:4px;color:var(--sub);text-decoration:none;font-size:14px;padding-block:16px 4px}
+.phead{padding-block:4px 6px}
+.pn{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--sea);color:var(--on-sea);font-weight:800;font-size:15px;margin-right:8px;vertical-align:3px}
+.phead h1{display:inline;font-size:23px;margin:0;font-weight:800;letter-spacing:-.01em}
+.phead p{margin:8px 0 0;color:var(--sub);font-size:14px;max-width:36em}
+.pbar{display:flex;align-items:center;gap:10px;margin:12px 0 4px;font-size:12px;color:var(--sub)}
+.pbar .track{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.pbar .track i{display:block;height:100%;background:var(--leaf);border-radius:3px;transition:width .4s}
+.banner .btn{white-space:nowrap;flex:none}
+.onb-row{display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding-block:10px;border-top:1px solid var(--line)}
+.onb h3+.onb-row{border-top:0}
+.onb-n{width:30px;height:30px;border-radius:50%;background:var(--sea-wash);color:var(--sea);display:grid;place-items:center;font-weight:800}
+.onb-n svg{width:16px;height:16px}
+.onb-row.done .onb-n{background:var(--leaf);color:var(--card)}
+.onb-row b{display:block;font-size:15px;line-height:1.5}
+.onb-row.done b{color:var(--sub);text-decoration:line-through;text-decoration-color:var(--sea-soft)}
+.onb-d{display:block;font-size:13px;color:var(--sub);margin:2px 0 8px;line-height:1.6}
+.onb-foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px;font-weight:700}
+.linkbtn{background:none;border:0;color:var(--sea);font:inherit;font-weight:700;cursor:pointer;padding:6px 0}
+.reportrow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border-radius:var(--r-m);padding:14px 16px;margin:0 0 14px;box-shadow:var(--shadow);text-decoration:none;color:inherit}
+.reportrow b{display:block;font-size:15px}
+.reportrow small{display:block;font-size:12px;color:var(--sub);margin-top:2px}
+.faq details{border-top:1px solid var(--line);padding-block:12px}
+.faq details:first-child{border-top:0;padding-top:0}
+.faq summary{font-weight:700;cursor:pointer;font-size:15px}
+.faq p{font-size:14px;margin:8px 0 0;line-height:1.75}
+.banner.warn{background:var(--ember-wash);border-color:var(--ember)}
+.banner.warn b{color:var(--ember)}
+.banner{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--sun-wash);border:1px solid var(--sun);border-radius:var(--r-m);padding:10px 12px;margin:0 0 14px;font-size:13px}
+
+.hero{background:var(--sun);color:var(--sun-ink);border-radius:var(--r-xl);padding:20px 20px 18px;margin:4px 0 18px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-48px;top:-48px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.55),rgba(255,255,255,0) 65%);pointer-events:none}
+.hero .k{font-size:13px;font-weight:700;opacity:.75}
+.hero h2{margin:4px 0 6px;font-size:24px;line-height:1.35;font-weight:800;letter-spacing:-.01em;max-width:18em}
+.hero p{margin:0 0 14px;font-size:14px;max-width:32em}
+.hero .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.hero .from{font-size:12px;font-weight:700;opacity:.75}
+.hero .go{background:var(--sun-ink);color:var(--sun);text-decoration:none;font-weight:700;font-size:14px;padding:11px 18px;border-radius:999px}
+.hero.allset{background:var(--leaf-wash);color:var(--ink)}
+
+.snap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:22px}
+@media(min-width:600px){.snap{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.stat{background:var(--card);border-radius:var(--r-m);padding:12px;box-shadow:var(--shadow);text-decoration:none;color:inherit;min-width:0}
+.stat span{display:block;font-size:11px;color:var(--sub)}
+.stat b{display:block;font-size:18px;line-height:1.3;margin-top:2px}
+.stat em{font-style:normal;font-size:11px}
+.up{color:var(--leaf)}.down{color:var(--ember)}.muted{color:var(--sub)}
+
+.sec-h{font-size:16px;font-weight:800;margin:0 0 10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sec-h small{font-weight:400;color:var(--sub);font-size:12px}
+.plist{background:var(--card);border-radius:var(--r-l);box-shadow:var(--shadow);overflow:hidden;margin-bottom:22px}
+.prow{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 14px 14px 16px;color:inherit;text-decoration:none;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0}
+.prow .n{font-size:23px;font-weight:800;color:var(--sea);text-align:center}
+.prow .t{font-weight:700;font-size:15px;line-height:1.35}
+.prow .s{font-size:12px;color:var(--sub);margin-top:2px}
+.ring{--p:0;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;color:var(--sub);background:conic-gradient(var(--leaf) calc(var(--p)*1%),var(--line) 0)}
+.ring::before{content:attr(data-v);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--card)}
+.queue{list-style:none;margin:0 0 22px;padding:0}
+.queue li a{display:grid;grid-template-columns:1.4em minmax(0,1fr);gap:2px 10px;padding:10px 2px;border-bottom:1px dashed var(--line);color:inherit;text-decoration:none;font-size:14px}
+.queue li .o{font-weight:800;color:var(--sea)}
+.queue li .p{grid-column:2;font-size:11px;color:var(--sub)}
+
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-block:10px 12px;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px));scrollbar-width:none;position:sticky;top:env(safe-area-inset-top,0px);background:var(--paper);z-index:5}
+.tabs::-webkit-scrollbar{display:none}
+.tabs a{flex:none;padding:8px 14px;border-radius:999px;font-size:14px;text-decoration:none;color:var(--sub);background:var(--card);border:1px solid var(--line);font-weight:700}
+.tabs a.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:14px}
+.seg a{text-align:center;padding:9px 0;border-radius:999px;text-decoration:none;color:var(--sub);font-weight:700;font-size:14px}
+.seg a.on{background:var(--sea);color:var(--on-sea)}
+
+.panel{background:var(--card);border-radius:var(--r-l);padding:16px;margin:0 0 12px;box-shadow:var(--shadow);min-width:0}
+.panel h3{margin:0 0 12px;font-size:16px;font-weight:800}
+.panel h3 small{font-weight:400;color:var(--sub);font-size:12px;margin-left:6px}
+.note{font-size:12px;color:var(--sub);line-height:1.7;margin:8px 0 0}
+.callout{background:var(--sea-wash);border-radius:var(--r-m);padding:12px 14px;font-size:13px;margin:0 0 12px}
+
+.group-h{font-size:15px;font-weight:800;margin:20px 0 2px}
+.group-h:first-child{margin-top:0}
+.group-d{font-size:12px;color:var(--sub);margin:0 0 6px}
+.todo{display:grid;grid-template-columns:36px minmax(0,1fr);gap:6px;padding-block:10px;border-top:1px solid var(--line)}
+.group-d+.todo,.panel>.todo:first-child{border-top:0}
+.check{width:28px;height:28px;margin-top:1px;border-radius:50%;border:2px solid var(--sea-soft);background:transparent;cursor:pointer;display:grid;place-items:center;padding:0;color:transparent;transition:background .15s,border-color .15s}
+.check svg{width:16px;height:16px}
+.todo.done .check{background:var(--leaf);border-color:var(--leaf);color:var(--card)}
+.check:disabled{cursor:default}
+.todo summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;padding-block:3px;font-size:15px;font-weight:700;line-height:1.45}
+.todo summary::-webkit-details-marker{display:none}
+.todo summary .tt{flex:1 1 200px}
+.todo.done summary .tt{color:var(--sub);text-decoration:line-through;text-decoration-color:var(--sea-soft)}
+.todo summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--sub);border-bottom:2px solid var(--sub);transform:rotate(45deg);margin:0 4px 4px;transition:transform .2s}
+.todo details[open] summary::after{transform:rotate(-135deg);margin-bottom:-2px}
+.tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.tag.hot{background:var(--sun);color:var(--sun-ink)}
+.tag.mid{background:var(--sea-wash);color:var(--sea)}
+.tag.auto{background:var(--leaf-wash);color:var(--leaf)}
+.tag.warn{background:var(--ember-wash);color:var(--ember)}
+.todo .body{font-size:14px;padding-block:4px 6px}
+.todo .body p{margin:6px 0}
+.todo .body .lb{display:inline-block;font-size:11px;font-weight:700;color:var(--sea);margin-right:6px}
+.todo .body .lnk{display:inline-block;margin-top:4px;font-size:13px;font-weight:700}
+.todo.flash{animation:flash 1.6s ease}
+@keyframes flash{0%,30%{background:var(--sun-wash)}100%{background:transparent}}
+
+.field{margin-bottom:14px}
+.field>label,.flabel{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.hint{font-weight:400;color:var(--sub);font-size:12px;margin-left:4px}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--paper);color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--sea);box-shadow:0 0 0 3px var(--sea-wash)}
+textarea{min-height:76px;resize:vertical;line-height:1.6}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.chips label{padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--paper);font-size:14px;cursor:pointer;user-select:none;-webkit-user-select:none;font-weight:500;line-height:1.3}
+.chips input:checked+label{background:var(--sea);border-color:var(--sea);color:var(--on-sea);font-weight:700}
+.chips input:focus-visible+label{outline:3px solid var(--sea-2);outline-offset:2px}
+.qblock{padding-block:12px;border-top:1px solid var(--line)}
+.qblock:first-of-type{border-top:0;padding-top:0}
+.qblock .flabel{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.qblock .flabel em{font-style:normal;font-weight:400;font-size:12px;color:var(--sub);text-align:right}
+.subhead{font-size:13px;font-weight:800;color:var(--sea);margin:18px 0 0}
+.btn{font:inherit;font-size:15px;font-weight:700;border:0;border-radius:999px;padding:13px 20px;cursor:pointer;background:var(--sea);color:var(--on-sea);text-decoration:none;display:inline-block;text-align:center}
+.btn.block{width:100%}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--ember);border:1px solid var(--ember)}
+.btn.sun{background:var(--sun);color:var(--sun-ink)}
+.btn.small{padding:8px 14px;font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns>*{flex:1 1 auto}
+.savebar{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom,0px));padding-block:10px 4px;background:linear-gradient(to bottom,transparent,var(--card) 30%);margin-inline:-16px;padding-inline:16px;z-index:4;display:flex;gap:8px;align-items:center}
+.savebar .st-line{flex:1;font-size:12px;color:var(--sub)}
+
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(min-width:560px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.kv{background:var(--paper);border-radius:var(--r-m);padding:12px;min-width:0}
+.kv span{display:block;font-size:11px;color:var(--sub)}
+.kv b{display:block;font-size:19px;margin-top:2px;line-height:1.3}
+.kv em{display:block;font-style:normal;font-size:11px;margin-top:2px}
+.meter{height:10px;background:var(--paper);border-radius:5px;overflow:hidden;margin:8px 0 6px}
+.meter i{display:block;height:100%;background:var(--sea);border-radius:5px}
+.big{font-size:27px;font-weight:800;line-height:1.2}
+
+.dist{display:grid;gap:8px}
+.dist .r{display:grid;grid-template-columns:minmax(5em,8.5em) minmax(0,1fr) 3.6em;gap:8px;align-items:center;font-size:13px}
+.dist .bar{height:20px;background:var(--paper);border-radius:4px;overflow:hidden}
+.dist .bar i{display:block;height:100%;background:var(--sea-soft);border-radius:4px}
+.dist .r.top .bar i{background:var(--sea)}
+.dist .v{text-align:right;color:var(--sub)}
+.insights{margin:0;padding:0;list-style:none}
+.insights li{position:relative;padding:8px 0 8px 18px;font-size:14px;border-top:1px solid var(--line)}
+.insights li:first-child{border-top:0}
+.insights li::before{content:"";position:absolute;left:2px;top:16px;width:7px;height:7px;border-radius:50%;background:var(--sun-line)}
+.persona{border:1px solid var(--line);border-radius:var(--r-m);padding:12px 14px;margin-bottom:10px}
+.persona .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.persona .h b{font-size:15px}
+.persona dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:0;font-size:13px}
+.persona dt{color:var(--sub)}
+.persona dd{margin:0}
+
+/* お客様台帳 */
+.search{position:relative;margin-bottom:10px}
+.search input{padding-left:40px;background:var(--card)}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--sub)}
+.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.filters a{flex:none;padding:6px 12px;border-radius:999px;font-size:13px;text-decoration:none;color:var(--sub);border:1px solid var(--line);background:var(--card);font-weight:700}
+.filters a.on{background:var(--sea);color:var(--on-sea);border-color:var(--sea)}
+.clist{background:var(--card);border-radius:var(--r-l);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
+.crow{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--line);text-decoration:none;color:inherit}
+.crow:first-child{border-top:0}
+.av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:17px;color:var(--on-sea);background:var(--sea);overflow:hidden;flex:none}
+.av img{width:100%;height:100%;object-fit:cover}
+.av.big{width:76px;height:76px;font-size:26px}
+.crow .nm{font-weight:800;font-size:15px;line-height:1.3}
+.crow .nm small{display:block;font-weight:400;color:var(--sub);font-size:12px}
+.crow .sb{font-size:12px;color:var(--sub);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .ft{font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .rt{text-align:right;font-size:11px;color:var(--sub);white-space:nowrap}
+.crow .rt b{display:block;font-size:13px;color:var(--ink)}
+.chead{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;margin:4px 0 14px}
+.chead h1{margin:0;font-size:24px;font-weight:800;line-height:1.3}
+.chead .sb{font-size:13px;color:var(--sub)}
+.photo{width:100%;border-radius:var(--r-m);display:block;margin-bottom:10px;max-height:320px;object-fit:contain;background:var(--paper)}
+.vlist{display:flex;flex-wrap:wrap;gap:6px}
+.vlist span{display:inline-flex;align-items:center;gap:6px;background:var(--paper);border-radius:999px;padding:4px 6px 4px 10px;font-size:13px}
+.vlist button{border:0;background:var(--line);color:var(--ink);width:20px;height:20px;border-radius:50%;font-size:12px;line-height:1;cursor:pointer;padding:0}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:11px;color:var(--sub);font-weight:700}
+th:first-child,td:first-child{text-align:left}
+td.memo{text-align:left;white-space:normal;color:var(--sub);min-width:120px}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--sea-wash)}
+.tw{overflow-x:auto;margin-inline:-4px}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--sub);font-size:11px}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--sub);margin-top:6px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.empty{text-align:center;padding:28px 12px}
+.empty p{color:var(--sub);font-size:14px;margin:0 0 14px}
+
+.tpl{border:1px solid var(--line);border-radius:var(--r-m);padding:12px 14px;margin-bottom:10px}
+.tpl .h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.tpl .h b{font-size:14px}
+.tpl pre{margin:0;white-space:pre-wrap;font:inherit;font-size:14px;color:var(--ink);background:var(--paper);border-radius:var(--r-s);padding:10px 12px}
+.adopted{background:var(--sea);color:var(--on-sea);border-radius:var(--r-l);padding:18px;margin-bottom:12px}
+.adopted span{font-size:12px;opacity:.85}
+.adopted p{margin:4px 0 0;font-size:21px;font-weight:800;line-height:1.45}
+.cand{display:flex;gap:10px;align-items:center;padding-block:10px;border-top:1px solid var(--line);font-size:15px}
+.cand:first-child{border-top:0}
+.cand p{margin:0;flex:1;min-width:0}
+.preview{background:var(--sun-wash);border-radius:var(--r-m);padding:12px 14px;font-weight:700;margin:4px 0 12px;min-height:48px}
+.exp{display:block;background:var(--card);border-radius:var(--r-l);padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);text-decoration:none;color:inherit}
+.exp .h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.exp .h b{font-size:16px;line-height:1.4}
+.exp .d{font-size:12px;color:var(--sub);margin-top:2px}
+.st{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.st.plan{background:var(--sea-wash);color:var(--sea)}
+.st.run{background:var(--sun);color:var(--sun-ink)}
+.st.wait{background:var(--ember-wash);color:var(--ember)}
+.st.done{background:var(--leaf-wash);color:var(--leaf)}
+.exp .res{display:flex;gap:16px;margin-top:10px;font-size:13px;flex-wrap:wrap}
+.exp .res div span{display:block;font-size:11px;color:var(--sub)}
+.exp .res div b{font-size:16px}
+.talkrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;padding-block:10px;border-top:1px solid var(--line);font-size:13px}
+.talkrow:first-child{border-top:0}
+.tg{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.tg span{background:var(--paper);border-radius:999px;padding:1px 8px;font-size:12px}
+
+nav.bn{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:20}
+nav.bn .in{display:flex;max-width:720px;width:100%}
+nav.bn a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--sub);text-decoration:none;padding-block:4px;font-weight:700}
+nav.bn a svg{width:24px;height:24px}
+nav.bn a.on{color:var(--sea)}
+nav.bn a.add .ic{display:grid;place-items:center;width:46px;height:46px;margin-top:-18px;border-radius:50%;background:var(--sun);color:var(--sun-ink);box-shadow:0 6px 16px -6px rgba(0,0,0,.35)}
+nav.bn a.add .ic svg{width:22px;height:22px}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:40;max-width:calc(100vw - 32px);text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.modal{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:end center;z-index:50;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal .box{background:var(--card);border-radius:var(--r-l);padding:18px;width:100%;max-width:420px}
+.modal p{margin:0 0 16px;font-size:15px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<style>body{padding-top:calc(env(safe-area-inset-top) + 22px)!important}</style>
+<div id="stgBar" style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;font:bold 12px/1 sans-serif;text-align:center;padding:calc(env(safe-area-inset-top) + 4px) 8px 4px;pointer-events:none;letter-spacing:.05em">テスト版｜本番のデータとは別に保存されます</div>
+<div class="wrap" id="app"></div>
+<nav class="bn" aria-label="メインメニュー"><div class="in">
+  <a href="#/home" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>ホーム</a>
+  <a href="#/p/p1/month" data-nav="p1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>数字</a>
+  <a href="#/entry" data-nav="entry" class="add"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>記録</a>
+  <a href="#/cust" data-nav="cust"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.9.7 3.1 2.4 3.5 5.2"/></svg>お客さん</a>
+  <a href="#/p/p6/list" data-nav="p6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M7 15h10"/></svg>施策</a>
+</div></nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="modal-root"></div>
+<input type="file" id="file" accept=".csv,.json,text/csv,application/json" hidden>
+<input type="file" id="photo" accept="image/*" hidden>
+
+<script>
+(function(){
+'use strict';
+/* ============ 保存（この端末の中だけ） ============ */
+const LKEY='stg_growth-note-v2',PREF='stg_growth-note-pref-v2';
+const WD=['日','月','火','水','木','金','土'];
+const defSettings=()=>({name:'',seats:null,bizDays:26,target:null,ticket:null,advisor:'周平さん'});
+const blank=()=>({settings:defSettings(),days:{},months:{},talks:[],exps:[],custs:[],todo:{},value:{answers:{},cands:[],adopted:null}});
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
+let S=blank(),mode='local',REAL=null,storageOK=true;
+const pref=Object.assign({entryTab:'talk',lastBackup:0,lastReport:0,reportNote:'',onboardDone:false,onbHome:false},store.get(PREF,{}));
+const savePref=()=>{try{store.set(PREF,pref);}catch(e){}};
+function load(){const L=store.get(LKEY,null);if(L){S=Object.assign(blank(),L);['talks','exps','custs'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});S.settings=Object.assign(defSettings(),S.settings);}}
+function saveAll(){if(mode==='demo')return;try{store.set(LKEY,S);storageOK=true;markSaved();}
+  catch(e){storageOK=false;toast('端末の保存領域がいっぱいです。バックアップを保存して、名刺写真を整理してください');}}
+function markSaved(){const el=document.getElementById('saved');if(!el)return;const d=new Date();el.textContent=`自動保存 ${pad(d.getHours())}:${pad(d.getMinutes())}`;el.classList.add('pulse');setTimeout(()=>el.classList.remove('pulse'),500);}
+const putDay=(d,o)=>{S.days[d]=o;saveAll();};
+const delDay=d=>{delete S.days[d];saveAll();};
+const upsert=(arr,x)=>{const i=S[arr].findIndex(e=>e.id===x.id);if(i>=0)S[arr][i]=x;else S[arr].push(x);saveAll();};
+const remove=(arr,id)=>{S[arr]=S[arr].filter(e=>e.id!==id);saveAll();};
+const putMonth=(m,o)=>{S.months[m]=o;saveAll();};
+
+/* 名刺写真は端末内のデータベースに保存 */
+const idb={_p:null,open(){if(!this._p)this._p=new Promise(res=>{try{if(!window.indexedDB)return res(null);const r=indexedDB.open('stg_growth-note',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('photos');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}catch(e){res(null);}});return this._p;},
+  async tx(mode,fn){const d=await this.open();if(!d)return null;return new Promise(res=>{try{const t=d.transaction('photos',mode),st=t.objectStore('photos'),rq=fn(st);
+    t.oncomplete=()=>res(rq&&rq.result!==undefined?rq.result:true);t.onerror=()=>res(null);}catch(e){res(null);}});},
+  get(k){return this.tx('readonly',s=>s.get(k));},put(k,v){return this.tx('readwrite',s=>s.put(v,k));},del(k){return this.tx('readwrite',s=>s.delete(k));},
+  async all(){const keys=await this.tx('readonly',s=>s.getAllKeys())||[];const out={};for(const k of keys)out[k]=await this.get(k);return out;}};
+function compressImage(file){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);
+  img.onload=()=>{const m=900,sc=Math.min(1,m/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',.72));};
+  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('画像を読み込めませんでした'));};img.src=url;});}
+
+/* ============ ユーティリティ ============ */
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const toDate=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
+const ymOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1);
+const today=()=>iso(new Date());
+const daysAgo=s=>s?Math.round((toDate(today())-toDate(s))/864e5):null;
+const agoLabel=s=>{const n=daysAgo(s);return n==null?'―':n===0?'今日':n===1?'昨日':n<60?`${n}日前`:`${Math.round(n/30)}か月前`;};
+const prevYm=m=>{const[y,mo]=m.split('-').map(Number);return ymOf(new Date(y,mo-2,1));};
+const ymLabel=m=>{const[y,mo]=m.split('-');return `${y}年${+mo}月`;};
+const yen=v=>v==null||!isFinite(v)?'―':'¥'+Math.round(v).toLocaleString('ja-JP');
+const man=v=>v==null||!isFinite(v)?'―':(Math.abs(v)>=10000?(v/10000).toFixed(Math.abs(v)>=1e6?0:1).replace(/\.0$/,'')+'万円':Math.round(v).toLocaleString('ja-JP')+'円');
+const num=(v,dg=0)=>v==null||!isFinite(v)?'―':Number(v).toLocaleString('ja-JP',{maximumFractionDigits:dg,minimumFractionDigits:dg});
+const pct=(v,dg=0)=>v==null||!isFinite(v)?'―':(v*100).toFixed(dg)+'%';
+const signPct=r=>(r>=0?'+':'')+(r*100).toFixed(1)+'%';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nn=v=>{if(v===''||v==null)return null;const n=Number(String(v).replace(/[,¥円\s]/g,''));return isNaN(n)?null:n;};
+const sum=(a,f)=>a.reduce((s,x)=>s+(f(x)||0),0);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),2600);}
+function delta(cur,prev,label='前月比'){if(cur==null||!prev)return'<em class="muted">前月データなし</em>';const r=cur/prev-1;return`<em class="${r>=0?'up':'down'}">${label} ${signPct(r)}</em>`;}
+const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+function ask(msg,okLabel,danger){return new Promise(res=>{const root=$('#modal-root');
+  root.innerHTML=`<div class="modal" role="dialog" aria-modal="true"><div class="box"><p>${msg}</p><div class="btns"><button class="btn ghost" data-m="0">やめる</button><button class="btn ${danger?'danger':''}" data-m="1">${okLabel}</button></div></div></div>`;
+  const close=v=>{root.innerHTML='';res(v);};
+  root.querySelector('.modal').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b)close(b.dataset.m==='1');else if(e.target.classList.contains('modal'))close(false);});
+  root.querySelector('[data-m="1"]').focus();});}
+const entries=()=>Object.keys(S.days).sort().map(d=>Object.assign({date:d},S.days[d]));
+const monthEntries=m=>entries().filter(e=>e.date.startsWith(m));
+function stats(es){const days=es.length,sales=sum(es,e=>e.sales),guests=sum(es,e=>e.guests);const wn=es.filter(e=>e.newGuests!=null&&e.guests);
+  return{days,sales,guests,avgSales:days?sales/days:null,avgGuests:days?guests/days:null,ticket:guests?sales/guests:null,newRate:wn.length?sum(wn,e=>e.newGuests)/sum(wn,e=>e.guests):null};}
+
+/* ============ 会話メモ・お客様の項目 ============ */
+const Q={
+  seg:{l:'宮崎とのご縁',ask:'「宮崎とはご縁があるんですか？」',multi:false,opts:['宮崎出身','宮崎にゆかり','宮崎好き・旅行','ゆかりなし']},
+  from:{l:'宮崎のどちら',ask:'「宮崎のどちらですか？」',multi:false,opts:['宮崎市','都城','延岡','日南・串間','小林・えびの','日向・門川','西都・児湯','その他']},
+  vis:{l:'来店は何回目',ask:'「前にも来てくださいましたっけ？」',multi:false,opts:['初めて','2〜4回目','5回以上']},
+  ch:{l:'知ったきっかけ',ask:'「何でうちを知ってくださったんですか？」',multi:false,opts:['Googleマップ','Instagram','グルメサイト','県人会・紹介','通りがかり','イベント','その他']},
+  purpose:{l:'誰と・どんな集まり',ask:'「今日はお仕事帰りですか？」',multi:false,opts:['仕事帰り','接待・会食','友人と','家族と','デート','一人飲み','同郷の集まり']},
+  age:{l:'年代',ask:'見た目の印象で大丈夫です',multi:false,opts:['20代','30代','40代','50代','60代以上']},
+  n:{l:'人数',ask:'',multi:false,opts:['1人','2人','3人','4人','5人以上']},
+  likes:{l:'喜んでいたもの',ask:'複数可',multi:true,opts:['地鶏炭火焼','チキン南蛮','冷汁','肉巻きおにぎり','宮崎牛','刺身','焼酎','その他']},
+  topics:{l:'盛り上がった話題',ask:'複数可',multi:true,opts:['地元・母校','宮崎の近況','仕事','スポーツ','旅行','食べ物・お酒']},
+  wants:{l:'要望・気になる点',ask:'複数可',multi:true,opts:['特になし','量','価格','提供の速さ','席・予約','新メニュー','もっと宮崎感']},
+  sat:{l:'満足度',ask:'表情や言葉から',multi:false,opts:['とても満足','満足','いまひとつ']},
+  ctag:{l:'お客様の種類',ask:'複数可',multi:true,opts:['常連','幹事をよくする','県人会','紹介してくれた','取引先・業者','要注意']},
+};
+const CORE=['seg','from','vis','ch'],MORE=['purpose','age','n','likes','topics','wants','sat'];
+
+/* ============ 6つの柱 ============ */
+const P=[
+ {id:'p1',n:1,name:'数字で店を分解する',lead:'売上＝客数×客単価×来店頻度。どこを伸ばすかで打ち手が変わります。利益まで見ないと、施策が当たっても儲からないことがあります。',tabs:[['todo','推奨案'],['month','月次'],['week','曜日・天気'],['fl','FL比率'],['data','データ']]},
+ {id:'p2',n:2,name:'お客さんを理解する',lead:'会話の中で自然に聞いたことを、タップで残します。客層ごとに来る理由、喜ぶもの、知ったきっかけが見えてきます。',tabs:[['todo','推奨案'],['talk','会話メモ'],['ana','分析']]},
+ {id:'p3',n:3,name:'独自の価値を一言にする',lead:'地鶏や焼酎は他の宮崎料理店にもあります。店主の人柄や場の空気のように、真似されにくい価値を言葉にします。',tabs:[['todo','推奨案'],['sheet','ワークシート']]},
+ {id:'p4',n:4,name:'集客の入口を整える',lead:'小規模店ではGoogleマップと口コミが最も費用対効果が高い傾向があります。お金をかける前に、無料でできる入口から固めます。',tabs:[['todo','推奨案'],['res','経路の実績']]},
+ {id:'p5',n:5,name:'リピートの仕組みを作る',lead:'飲食店の利益は2回目以降の来店で生まれます。名前と好みを覚え、一度来た人とつながり続ける仕組みを作ります。',tabs:[['todo','推奨案'],['tpl','文例'],['kpi','指標']]},
+ {id:'p6',n:6,name:'仮説と検証を回す',lead:'施策ごとに「何を・何人・いくら」を先に決め、終わったら数字で振り返ります。日々の記録から効果を自動で計算します。',tabs:[['list','施策'],['todo','推奨案']]},
+];
+const PM=Object.fromEntries(P.map(p=>[p.id,p]));
+const filledMonths=k=>Object.values(S.months).filter(m=>m&&m[k]!=null).length;
+const answered=()=>['why','owner','only','win'].filter(k=>(S.value.answers[k]||'').trim()).length;
+const T=[
+ {p:'p1',id:'p1-set',pri:'hot',t:'月の目標・席数・営業日数を決める',auto:()=>!!(S.settings.target&&S.settings.seats),why:'目標がないと、進み具合も「あといくら足りないか」も分かりません。',how:'設定に月の売上目標、席数、月の営業日数を入れます。目標は前年同月の売上×1.1が最初の目安です。',link:['settings','設定を開く']},
+ {p:'p1',id:'p1-daily',pri:'hot',t:'売上と客数を毎日記録する（まず7日分）',auto:()=>Object.keys(S.days).length>=7,why:'売上を客数と客単価に分けるだけで、伸ばすべき方向が見えます。',how:'レジ締めのついでに、売上・客数・メモの3つだけ入れます。入れた瞬間に自動保存されます。',link:['entry/sales','今日の売上を記録する']},
+ {p:'p1',id:'p1-weak',pri:'mid',t:'一番弱い曜日を見つける（4週分たまったら）',auto:()=>Object.keys(S.days).length>=28,why:'弱い曜日を平均並みに上げるのが、最も確実な伸びしろです。',how:'「曜日・天気」タブで全体比が最も低い曜日を確認し、その曜日だけの企画を⑥で試します。',link:['p/p1/week','曜日・天気を見る']},
+ {p:'p1',id:'p1-fl',pri:'mid',t:'月の原価と人件費を記録してFL比率を出す',auto:()=>Object.values(S.months).some(m=>m&&m.food!=null&&m.labor!=null),why:'売上が伸びても、原価と人件費が膨らめば利益は残りません。',how:'月末に食材・ドリンクの仕入れ額と人件費を入れます。一般的な目安はFL比率60%以下です。',link:['p/p1/fl','FL比率を入れる']},
+ {p:'p1',id:'p1-freq',pri:'',t:'来店頻度をつかむ（会話メモで来店回数を残す）',auto:()=>S.talks.filter(t=>t.vis).length>=10,why:'客数が同じでも、常連が支えているのか新規が多いのかで打ち手は逆になります。',how:'会話メモで「来店は何回目」をタップするだけで、再来店率が自動で出ます。',link:['entry/talk','会話メモを書く']},
+ {p:'p2',id:'p2-20',pri:'hot',t:'会話メモを20組分ためる',auto:()=>S.talks.length>=20,why:'20組分あれば、客層の偏りと知ったきっかけの傾向がはっきり見えます。',how:'お見送りの後に、聞けたところだけタップします。全部埋めなくて大丈夫です。',link:['entry/talk','会話メモを書く']},
+ {p:'p2',id:'p2-core',pri:'mid',t:'一番大事な客層を1つ決める',why:'全員に向けた言葉は誰にも刺さりません。売上を支える客層に絞ります。',how:'「お客さん」の「分析」にある「客層ごとの特徴」で、人数が多い客層と、常連が多い客層を比べて決めます。',link:['cust/ana','分析を見る']},
+ {p:'p2',id:'p2-words',pri:'',t:'客層ごとに刺さる言葉を決める',why:'同じ店でも、宮崎出身者と近隣の人では来たくなる理由が違います。',how:'宮崎出身者には「帰ってこられる場所」、宮崎好きには「旅の記憶の味」、近隣の人には「気軽さと看板の一品」が基本線です。会話メモの一言から実際の言葉を拾います。'},
+ {p:'p3',id:'p3-sheet',pri:'hot',t:'4つの問いに答える',auto:()=>answered()>=4,why:'独自の価値は考えて作るものではなく、すでにある事実から見つけるものです。',how:'「ワークシート」で、常連が通う理由や店主にしかないものを書き出します。会話メモの一言が一番のヒントです。',link:['p/p3/sheet','ワークシートを開く']},
+ {p:'p3',id:'p3-cand',pri:'mid',t:'一言の候補を3つ作る',auto:()=>S.value.cands.length>=3,why:'1つだけだと比べられません。3案あると、どれが一番「らしい」か判断できます。',how:'ワークシート下の組み立てツールで「誰が・何を・どんな店」を入れて候補を作ります。',link:['p/p3/sheet','組み立てる']},
+ {p:'p3',id:'p3-vote',pri:'',t:'常連さん5人に候補を見せて選んでもらう',auto:()=>!!S.value.adopted,why:'店側が言いたいことと、お客さんが感じている価値はよくずれます。',how:'「どれが一番この店っぽいですか」と聞くだけで十分です。選ばれた候補を「採用」にします。'},
+ {p:'p3',id:'p3-apply',pri:'',t:'採用した一言をお店の顔に反映する',why:'一言は使われて初めて意味があります。',how:'Googleマップの説明文、Instagramのプロフィール、店頭の看板やメニューの表紙に同じ言葉を入れます。'},
+ {p:'p4',g:'Googleマップ',id:'p4-gbp',pri:'hot',t:'営業時間・メニュー・電話番号を最新にする',why:'情報が古いだけで来店を逃します。検索した人が最初に見るのがここです。',how:'Googleビジネスプロフィールで、営業時間（臨時休業を含む）、メニューと価格、予約方法を更新します。'},
+ {p:'p4',g:'Googleマップ',id:'p4-photo',pri:'hot',t:'写真を20枚以上登録する',why:'写真が多いお店ほど、詳細を見られる回数が増える傾向があります。',how:'看板料理（地鶏の炭火焼、チキン南蛮など）、店内、店主の顔、焼酎の棚を明るい時間に撮ります。料理は真上と斜め45度の2枚ずつ。'},
+ {p:'p4',g:'Googleマップ',id:'p4-review',pri:'hot',t:'口コミをお願いする仕組みを作る',why:'口コミの数と新しさは、地図での表示順と来店の決め手の両方に効きます。',how:'口コミ投稿ページのQRコードを卓上カードにして、お会計時に一言添えます。文例は⑤の文例タブにあります。',link:['p/p5/tpl','文例を見る']},
+ {p:'p4',g:'Googleマップ',id:'p4-reply',pri:'mid',t:'口コミに全件返信する',why:'返信は、これから来る人への接客です。',how:'2日以内に、内容に触れて返します。低評価にも事実の説明と改善を短く書きます。'},
+ {p:'p4',g:'Instagram',id:'p4-ig',pri:'mid',t:'プロフィールに一言と予約方法を入れる',why:'Googleマップから流れてきた人が最後に確認するのがInstagramです。',how:'③で決めた一言、営業時間、予約方法を1行ずつ。',link:['p/p3/sheet','一言を決める']},
+ {p:'p4',g:'Instagram',id:'p4-post',pri:'',t:'週2回、料理と人が見える投稿をする',why:'料理だけの投稿はどこも同じに見えます。店主の顔と言葉が差になります。',how:'今日のおすすめと店主の一言を、営業前の16時台に投稿します。'},
+ {p:'p4',g:'宮崎つながり',id:'p4-kenjin',pri:'mid',t:'県人会・同郷の集まりで使ってもらう',why:'宮崎出身者は「宮崎の店」を探しています。団体予約は1回で売上が大きく動きます。',how:'幹事向けに飲み放題プランと幹事特典を用意します。お客様台帳で「幹事をよくする」「県人会」の方に絞ると、声をかける相手がすぐ分かります。',link:['cust','お客様台帳を開く']},
+ {p:'p4',g:'宮崎つながり',id:'p4-antenna',pri:'',t:'宮崎関連の場所やコミュニティに店の情報を置く',why:'宮崎に興味がある人が集まる場所は、最も確度の高い入口です。',how:'宮崎県のアンテナショップや宮崎ゆかりのSNSコミュニティに、ショップカードや紹介を置かせてもらえるか相談します。'},
+ {p:'p4',g:'イベント',id:'p4-event',pri:'mid',t:'交流会を定例化して、本店へ送客する',why:'イベントは新規と出会う場です。一度で終わらせず、本店の常連に変えて初めて売上になります。',how:'名刺交換した方はその場でお客様台帳に登録し、本店で使える次回特典を渡します。効果は⑥で施策として記録します。',link:['p/p6/list','施策に登録する']},
+ {p:'p4',g:'グルメサイト',id:'p4-gourmet',pri:'',t:'有料掲載は費用対効果を測ってから決める',why:'掲載料に見合う予約が来ているかは、測らないと分かりません。',how:'「掲載料÷そのサイト経由の予約組数」で1組あたりの獲得費用を出し、客単価×人数の粗利と比べます。'},
+ {p:'p5',id:'p5-regular',pri:'hot',t:'名刺交換した方・常連さんをお客様台帳に登録する',auto:()=>S.custs.length>=10,why:'「覚えてくれている」が、他店に移らない一番の理由になります。名前を忘れると、せっかくのつながりが途切れます。',how:'名刺を受け取ったらその場で写真を撮り、見た目の特徴（眼鏡、声が大きい、など）を一言添えます。名前を忘れても、特徴や会社名で探せます。',link:['entry/cust','お客様を登録する']},
+ {p:'p5',id:'p5-line',pri:'hot',t:'LINE公式アカウントを開設する',why:'一度来た人に、もう一度来る理由を届けられる手段です。',how:'無料プランで始められます。アカウント名は店名、プロフィールに③の一言を入れます。'},
+ {p:'p5',id:'p5-ask',pri:'hot',t:'お会計時にLINE登録をお願いする',why:'登録数は声かけの有無でほぼ決まります。',how:'卓上にQRコード、お会計時に一言添えます。登録特典（次回一品サービスなど）があると登録率が上がります。',link:['p/p5/tpl','声かけの文例']},
+ {p:'p5',id:'p5-sleep',pri:'mid',t:'しばらく来ていない常連さんに連絡する',why:'離れかけた常連さんは、一声かけるだけで戻ってくることが多いです。',how:'お客様台帳の「しばらく来ていない」で、60日以上来ていない常連さんを確認し、LINEや手紙で近況と季節のおすすめを送ります。',link:['cust/f/sleep','該当するお客様を見る']},
+ {p:'p5',id:'p5-card',pri:'mid',t:'2回目の来店特典を用意する',why:'1回目から2回目が最も離脱が大きい段階です。',how:'「次回、宮崎の◯◯を一品サービス」など原価の低い特典を、有効期限1か月で渡します。'},
+ {p:'p5',id:'p5-msg',pri:'mid',t:'月に1〜2回、LINEで配信する',why:'思い出してもらえれば、また来てくれます。送りすぎるとブロックされます。',how:'旬の宮崎食材の入荷、イベント告知、雨の日限定特典などを短く送ります。',link:['p/p5/tpl','配信の文例']},
+ {p:'p5',id:'p5-kpi',pri:'',t:'LINEの友だち数を毎月記録する',auto:()=>filledMonths('line')>=2,why:'増え方を見れば、声かけが続いているか分かります。',how:'月末に友だち数を「指標」タブに入れます。',link:['p/p5/kpi','指標を開く']},
+ {p:'p6',id:'p6-first',pri:'hot',t:'最初の施策を登録する',auto:()=>S.exps.length>=1,why:'目標を先に決めないと、終わってから「よかった気がする」で終わります。',how:'施策タブの「新しい施策を登録する」から、期間・目標・かかる費用を入れます。テンプレートからも作れます。',link:['exp/new','施策を登録する']},
+ {p:'p6',id:'p6-review',pri:'mid',t:'終わった施策を振り返る',auto:()=>S.exps.some(x=>(x.review||'').trim()),why:'振り返りがない施策は、次に活かせません。',how:'期間が終わると成果が自動で計算されます。目標との差と、次にどうするかを書きます。'},
+ {p:'p6',id:'p6-one',pri:'',t:'同時に試す施策は1つまでにする',why:'同時にいくつも始めると、何が効いたのか分からなくなります。',how:'実施中の施策が終わってから次を始めます。'},
+];
+const TM=Object.fromEntries(T.map(t=>[t.id,t]));
+const ORDER=['p1-set','p1-daily','p5-regular','p6-first','p2-20','p4-gbp','p4-review','p5-line','p5-ask','p4-photo','p3-sheet','p1-fl','p6-review','p1-weak','p5-sleep','p2-core','p3-cand','p5-card','p4-kenjin','p4-event','p5-msg'];
+const isAuto=t=>!!(t.auto&&t.auto());
+const isDone=t=>!!S.todo[t.id]||isAuto(t);
+const pillarProg=pid=>{const a=T.filter(t=>t.p===pid);return{done:a.filter(isDone).length,all:a.length};};
+function nextActions(n){const seq=[...ORDER,...T.map(t=>t.id).filter(id=>!ORDER.includes(id))];return seq.map(id=>TM[id]).filter(t=>!isDone(t)).slice(0,n);}
+
+/* ============ お客様の集計 ============ */
+const custTalks=c=>S.talks.filter(t=>t.custId===c.id);
+function custVisits(c){return [...new Set([...(c.visits||[]),...custTalks(c).map(t=>t.date)].filter(Boolean))].sort();}
+function lastSeen(c){const v=custVisits(c);return v.length?v[v.length-1]:(c.metAt||null);}
+const isRegular=c=>(c.ctag||[]).includes('常連')||custVisits(c).length>=3;
+const isSleeping=c=>isRegular(c)&&(daysAgo(lastSeen(c))??0)>=60;
+const bdayThisMonth=c=>c.bmonth&&+c.bmonth===new Date().getMonth()+1;
+const initial=c=>(c.kana||c.name||'？').trim().charAt(0);
+const custText=c=>[c.name,c.kana,c.company,c.title,c.feature,c.seg,c.from,c.memo,c.referrer,c.dislikes,...(c.likes||[]),...(c.ctag||[])].join(' ').toLowerCase();
+const CF={all:'全員',recent:'最近会った',regular:'常連',sleep:'しばらく来ていない',bday:'今月が誕生月',kanji:'幹事・県人会'};
+function custFilter(f,c){if(f==='recent')return (daysAgo(lastSeen(c))??999)<=30;if(f==='regular')return isRegular(c);if(f==='sleep')return isSleeping(c);if(f==='bday')return bdayThisMonth(c);
+  if(f==='kanji')return (c.ctag||[]).some(t=>t==='幹事をよくする'||t==='県人会');return true;}
+
+/* ============ ページ内ルーター ============ */
+let R=['home'];
+function go(path){R=String(path).replace(/^#?\/?/,'').split('/').filter(Boolean);if(!R.length)R=['home'];render();window.scrollTo(0,0);}
+document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#/"]');if(!a)return;e.preventDefault();flushForms();go(a.getAttribute('href').slice(2));});
+function render(){
+  const app=$('#app');let html='';
+  try{
+    if(R[0]==='p'&&PM[R[1]])html=vPillar(R[1],R[2],R[3]);
+    else if(R[0]==='entry')html=vEntry(R[1],R[2],R[3]);
+    else if(R[0]==='cust')html=vCust(R[1],R[2]);
+    else if(R[0]==='report')html=vReport();
+    else if(R[0]==='help')html=vHelp();
+    else if(R[0]==='settings')html=vSettings();
+    else if(R[0]==='exp')html=vExpForm(R[1],R[2]);
+    else html=vHome();
+  }catch(err){html=`<div class="panel" style="margin-top:16px">表示できませんでした：${esc(err.message)}</div>`;console.error(err);}
+  app.innerHTML=html;
+  const nav=R[0]==='p'?R[1]:R[0]==='exp'?'p6':R[0];
+  document.querySelectorAll('nav.bn a').forEach(a=>a.classList.toggle('on',a.dataset.nav===nav));
+  after();
+}
+const savedBadge=()=>mode==='demo'?'<span class="saved demo">デモ表示中</span>':`<span class="saved" id="saved">${storageOK?'この端末に自動保存':'保存できません'}</span>`;
+const UA=navigator.userAgent||'';
+const IN_APP=/\bLine\/|FBAN|FBAV|Instagram|KAKAOTALK/i.test(UA);
+const STANDALONE=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+const APP_URL='https://shuheigpkm.github.io/uriage-note/';
+const inAppBar=()=>IN_APP&&!STANDALONE?`<div class="banner warn"><span><b>LINEの中で開いています。</b>ここで入力した記録は、SafariやChromeとは別の場所に保存されます。いつものブラウザで開き直して、ホーム画面に追加してください。</span><a class="btn small" href="${APP_URL}?openExternalBrowser=1">ブラウザで開く</a></div>`:'';
+const demoBar=()=>mode==='demo'?`<div class="banner"><span>架空のデモデータです。何をしても保存されません。</span><button class="btn small" data-act="exitDemo">デモを終える</button></div>`:'';
+const header=(title,sub)=>`<header class="top"><div><div class="shop"><span>${esc(sub??S.settings.name)}</span>${savedBadge()}</div><h1>${title}</h1></div>
+  <a class="iconbtn" href="#/settings" aria-label="設定"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></a></header>${inAppBar()}${demoBar()}`;
+
+/* ============ ホーム ============ */
+function vHome(){
+  const nx=nextActions(4),m=ymOf(new Date()),st=stats(monthEntries(m)),pv=stats(monthEntries(prevYm(m)));
+  const running=S.exps.filter(x=>expStatus(x).k==='run').length,waiting=S.exps.filter(x=>expStatus(x).k==='wait').length;
+  const weekTalks=S.talks.filter(t=>(daysAgo(t.date)??99)<7).length,sleep=S.custs.filter(isSleeping).length;
+  const hasData=Object.keys(S.days).length||S.talks.length||S.custs.length;
+  const needBackup=mode!=='demo'&&hasData&&(Date.now()-(pref.lastBackup||0))>14*864e5;
+  const first=nx[0];
+  const hero=first?`<section class="hero" aria-labelledby="hero-t"><div class="k">次の一手</div><h2 id="hero-t">${esc(first.t)}</h2><p>${esc(first.why)}</p>
+    <div class="row"><span class="from">${PM[first.p].n}. ${PM[first.p].name}</span><a class="go" href="#/p/${first.p}/todo/${first.id}">やり方を見る</a></div></section>`
+    :`<section class="hero allset"><div class="k">推奨案</div><h2>主要な推奨案はすべて完了しています</h2><p>施策を回しながら、月次の数字で効果を確かめていきましょう。</p></section>`;
+  return header('売上アップ・ノート',S.settings.name||'店名は設定から')+
+  (needBackup?`<div class="banner"><span>${pref.lastBackup?'最後のバックアップから2週間以上たちました。':'まだバックアップがありません。'}端末の故障に備えて保存しておきましょう。</span><button class="btn small" data-act="backup">保存する</button></div>`:'')+
+  onboardCard()+hero+reportRow()+`<div class="snap">
+    <a class="stat" href="#/p/p1/month"><span>今月の日販</span><b>${st.days?man(st.avgSales):'―'}</b>${st.days?delta(st.avgSales,pv.avgSales):'<em class="muted">記録なし</em>'}</a>
+    <a class="stat" href="#/cust/ana"><span>会話メモ</span><b>${S.talks.length}組</b><em class="muted">この7日で${weekTalks}組</em></a>
+    <a class="stat" href="#/cust"><span>お客様台帳</span><b>${S.custs.length}人</b><em class="${sleep?'down':'muted'}">${sleep?`しばらく来ていない常連 ${sleep}人`:'名刺・常連さんを登録'}</em></a>
+    <a class="stat" href="#/p/p6/list"><span>施策</span><b>${running}件実施中</b><em class="${waiting?'down':'muted'}">${waiting?`振り返り待ち${waiting}件`:`登録${S.exps.length}件`}</em></a></div>
+  <h2 class="sec-h">6つの取り組み<small>完了した推奨案の数</small></h2>
+  <div class="plist">${P.map(p=>{const g=pillarProg(p.id),r=Math.round(g.done/g.all*100),nxt=T.find(t=>t.p===p.id&&!isDone(t));
+    return `<a class="prow" href="#/p/${p.id}/${p.tabs[0][0]}"><span class="n">${p.n}</span><span><div class="t">${p.name}</div><div class="s">${nxt?'次：'+esc(nxt.t):'すべて完了'}</div></span><span class="ring" style="--p:${r}" data-v="${g.done}/${g.all}" aria-label="${g.all}件中${g.done}件完了"></span></a>`;}).join('')}</div>
+  ${nx.length>1?`<h2 class="sec-h">その次にやること<small>今回の推奨順</small></h2><ol class="queue">${nx.slice(1).map((t,i)=>`<li><a href="#/p/${t.p}/todo/${t.id}"><span class="o">${i+2}</span><span>${esc(t.t)}</span><span class="p">${PM[t.p].n}. ${PM[t.p].name}</span></a></li>`).join('')}</ol>`:''}`;
+}
+
+
+/* ============ はじめての3ステップ・週間報告・使い方 ============ */
+const IS_IOS=/iPhone|iPad|iPod/.test(UA);
+const advisor=()=>S.settings.advisor||'周平さん';
+function onboardCard(){if(mode==='demo'||pref.onboardDone)return'';
+  const s1=STANDALONE||pref.onbHome,s2=!!S.settings.name,s3=S.custs.length>=1,all=s1&&s2&&s3;
+  const row=(done,n,t,d,act)=>`<div class="onb-row ${done?'done':''}"><span class="onb-n">${done?CHECK:n}</span><div><b>${t}</b>${done?'':`<span class="onb-d">${d}</span>${act}`}</div></div>`;
+  return `<section class="panel onb"><h3>${all?'準備ができました':'はじめての3ステップ'}<small>${[s1,s2,s3].filter(Boolean).length} / 3</small></h3>
+  ${row(s1,1,'ホーム画面から開けるようにする',IN_APP?'LINEの中で入れた記録は、別の場所に保存されてしまいます。まずブラウザで開いてください。':IS_IOS?'Safariの下にある共有ボタン（四角に↑）から「ホーム画面に追加」。次からは、そのアイコンから開きます。':'Chromeの右上「⋮」から「ホーム画面に追加」。次からは、そのアイコンから開きます。',IN_APP?`<a class="btn small" href="${APP_URL}?openExternalBrowser=1">ブラウザで開く</a>`:'<button class="btn ghost small" data-act="onbHome">追加しました</button>')}
+  ${row(s2,2,'店名を入れる','月の目標や席数は、あとからでも大丈夫です。','<a class="btn ghost small" href="#/settings">設定を開く</a>')}
+  ${row(s3,3,'常連さんを1人登録してみる','名前と、見た目の特徴を一言。それだけで十分です。','<a class="btn ghost small" href="#/entry/cust">登録する</a>')}
+  <div class="onb-foot"><a href="#/help">使い方とよくある質問</a>${all?'<button class="linkbtn" data-act="onbClose">閉じる</button>':''}</div></section>`;}
+function reportRow(){const d=pref.lastReport?Math.floor((Date.now()-pref.lastReport)/864e5):null,due=d==null||d>=7;
+  return `<a class="reportrow" href="#/report"><span><b>今週の報告を${esc(advisor())}に送る</b><small>${d==null?'まだ送っていません':d===0?'今日送りました':`${d}日前に送りました`}</small></span>${due?'<span class="tag hot">送る時期です</span>':'<span aria-hidden="true">›</span>'}</a>`;}
+function weekSpan(off){const e=new Date();e.setDate(e.getDate()-off);const s=new Date(e);s.setDate(s.getDate()-6);return[iso(s),iso(e)];}
+function buildReport(note){
+  const[a,b]=weekSpan(0),[pa,pb]=weekSpan(7),es=entries().filter(e=>e.date>=a&&e.date<=b),ps=entries().filter(e=>e.date>=pa&&e.date<=pb),st=stats(es),pst=stats(ps);
+  const tk=S.talks.filter(t=>t.date>=a&&t.date<=b),startMs=toDate(a).getTime();
+  const newC=S.custs.filter(c=>(c.created&&c.created>=startMs)||(c.metAt&&c.metAt>=a&&c.metAt<=b)).length,sleep=S.custs.filter(isSleeping).length;
+  const run=S.exps.filter(x=>expStatus(x).k==='run').map(x=>x.name),wait=S.exps.filter(x=>expStatus(x).k==='wait').map(x=>x.name);
+  const md=s=>{const d=toDate(s);return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;},L=[];
+  L.push(`【${S.settings.name||'お店'} 週間報告】`,`${md(a)}〜${md(b)}`,'','■売上');
+  if(st.days){L.push(`・合計 ${yen(st.sales)}（記録${st.days}日）`,`・日販 ${yen(st.avgSales)}${pst.days?`（前週 ${yen(pst.avgSales)}、${signPct(st.avgSales/pst.avgSales-1)}）`:''}`);
+    if(st.guests)L.push(`・客数 ${num(st.guests)}人／客単価 ${yen(st.ticket)}`);
+    const best=es.slice().sort((x,y)=>y.sales-x.sales)[0];L.push(`・一番よかった日 ${md(best.date)} ${yen(best.sales)}${best.memo?`（${best.memo}）`:''}`);}
+  else L.push('・今週は記録なし');
+  L.push('','■お客さん',`・会話メモ ${tk.length}組`);
+  if(tk.length){const g=topOf('seg',tk)[0],c=topOf('ch',tk)[0],w=countBy('wants',tk).rows.filter(r=>r.k!=='特になし'&&r.v).sort((x,y)=>y.v-x.v)[0];
+    if(g)L.push(`・多い客層：${g.k}`);if(c)L.push(`・知ったきっかけ：${c.k}が最多`);if(w)L.push(`・要望：${w.k}（${w.v}組）`);
+    tk.filter(t=>(t.note||'').trim()).slice(-2).forEach(t=>L.push(`・お客さんの言葉「${t.note}」`));}
+  L.push(`・台帳に新しく登録 ${newC}人（合計${S.custs.length}人）`);if(sleep)L.push(`・しばらく来ていない常連 ${sleep}人`);
+  if(run.length||wait.length){L.push('','■施策');run.forEach(n=>L.push(`・実施中：${n}`));wait.forEach(n=>L.push(`・振り返り待ち：${n}`));}
+  const nx=nextActions(1)[0];if(nx)L.push('','■アプリの「次の一手」',`・${nx.t}`);
+  if((note||'').trim())L.push('','■ひとこと',note.trim());
+  return L.join('\n');}
+function vReport(){
+  return `<a class="back" href="#/home">‹ ホーム</a>${demoBar()}<div class="phead"><h1>今週の報告</h1><p>この1週間の記録をまとめました。${esc(advisor())}にLINEで送ると、数字を見てアドバイスを返してもらえます。お客様のお名前は入りません。</p></div>
+  <div class="panel"><div class="field"><label for="r-note">ひとこと<span class="hint">任意。気づいたこと、相談したいこと</span></label><textarea id="r-note" data-nosave placeholder="例：水曜がまだ弱いです。団体予約が2件入りました">${esc(pref.reportNote||'')}</textarea></div>
+  <div class="field"><label for="r-text">送る内容<span class="hint">そのまま直せます</span></label><textarea id="r-text" data-nosave style="min-height:320px;font-size:14px">${esc(buildReport(pref.reportNote))}</textarea></div>
+  <div class="btns"><button class="btn sun" data-act="shareReport">LINEで${esc(advisor())}に送る</button><button class="btn ghost" data-act="copyReport">コピー</button></div>
+  <p class="note">最後に送った日：${pref.lastReport?new Date(pref.lastReport).toLocaleDateString('ja-JP'):'まだありません'}。週に1回、営業後や休みの日に送るのがおすすめです。</p></div>`;}
+function vHelp(){const a=esc(advisor());
+  const Q=[['記録がゼロになった','LINEの中や、いつもと違うブラウザで開いていませんか。記録は開いた場所ごとに別々に保存されます。ホーム画面に追加したアイコンから開けば、いつもの記録が出てきます。前の記録は、記録したときと同じ開き方をすれば残っています。'],
+   ['お客様の名前を忘れた','「お客さん」の台帳の検索に、覚えていることを入れます。「眼鏡」「都城」「ゴルフ」のように、見た目の特徴、会社名、出身地のどれでも探せます。'],
+   ['毎日なにをすればいい？','1日3回だけです。お見送りのあとに会話メモをタップ（10秒）。名刺をもらったら台帳に名前と特徴（30秒）。閉店後に売上と客数（30秒）。全部できない日があっても大丈夫です。'],
+   ['スマホを変える・壊れたときは','設定の「バックアップを保存」で、記録と名刺写真をまとめたファイルが作れます。新しいスマホでこのアプリを開き、「バックアップ・CSVを取り込む」で戻せます。2週間に1回の保存がおすすめです。'],
+   ['記録は誰かに見られる？','このスマホの中だけに保存され、インターネットには送られません。「今週の報告」を送ったときだけ、その文章が相手に届きます。報告にお客様のお名前は入りません。'],
+   ['アプリの見た目が変わった','直したところがあると、次に開いたときに自動で新しくなります。記録はそのまま残ります。']];
+  return `<a class="back" href="#/home">‹ ホーム</a><div class="phead"><h1>使い方とよくある質問</h1></div>
+  <div class="panel faq">${Q.map(([q,t])=>`<details><summary>${q}</summary><p>${t}</p></details>`).join('')}</div>
+  <div class="panel"><h3>分からないときは</h3><p class="note" style="margin:0">${a}にLINEで聞いてください。画面のスクショを送ってもらえると早く解決できます。</p></div>`;}
+
+/* ============ 柱ページ ============ */
+function vPillar(pid,tab,focus){const p=PM[pid];if(!p.tabs.some(t=>t[0]===tab))tab=p.tabs[0][0];const g=pillarProg(pid);
+  const V={p1:{todo:vTodo,month:vMonth,week:vWeek,fl:vFL,data:vData},p2:{todo:vTodo,talk:vTalkList,ana:vTalkAna},p3:{todo:vTodo,sheet:vSheet},p4:{todo:vTodo,res:vChannelRes},p5:{todo:vTodo,tpl:vTpl,kpi:vRepeatKpi},p6:{list:vExpList,todo:vTodo}};
+  return `<a class="back" href="#/home">‹ ホーム</a>${demoBar()}<div class="phead"><span class="pn">${p.n}</span><h1>${p.name}</h1><p>${p.lead}</p>
+   <div class="pbar"><span class="track"><i id="pbar-i" style="width:${g.done/g.all*100}%"></i></span><span id="pbar-t">推奨案 ${g.done}/${g.all}</span></div></div>
+  <div class="tabs" role="tablist">${p.tabs.map(([k,l])=>`<a role="tab" aria-selected="${k===tab}" class="${k===tab?'on':''}" href="#/p/${pid}/${k}">${l}</a>`).join('')}</div>${V[pid][tab](pid,focus)}`;}
+function todoItem(t){const d=isDone(t),a=isAuto(t);
+  return `<div class="todo ${d?'done':''}" id="todo-${t.id}"><button class="check" data-act="toggle" data-id="${t.id}" aria-pressed="${d}" aria-label="${esc(t.t)}を完了にする" ${a?'disabled title="記録から自動で判定しています"':''}>${CHECK}</button>
+    <details><summary><span class="tt">${esc(t.t)}</span>${t.pri==='hot'?'<span class="tag hot">最優先</span>':t.pri==='mid'?'<span class="tag mid">優先</span>':''}${a?'<span class="tag auto">自動で完了</span>':''}</summary>
+    <div class="body"><p><span class="lb">なぜ</span>${esc(t.why)}</p><p><span class="lb">やり方</span>${esc(t.how)}</p>${t.link?`<a class="lnk" href="#/${t.link[0]}">${t.link[1]}</a>`:''}</div></details></div>`;}
+function vTodo(pid){const items=T.filter(t=>t.p===pid);
+  if(pid==='p4'){const groups=[...new Set(items.map(t=>t.g))];
+    const gd={'Googleマップ':'最優先。無料で、検索した人に一番最初に見られる入口です。','Instagram':'Googleマップで見つけた人が、雰囲気を確かめに来る場所です。','宮崎つながり':'宮崎出身者・宮崎好きに直接届く、この店ならではの入口です。','イベント':'新しいお客さんと出会う場。本店への送客までを設計します。','グルメサイト':'お金がかかる入口。効果を測ってから判断します。'};
+    return `<div class="panel">${groups.map(gn=>`<h3 class="group-h">${gn}</h3><p class="group-d">${gd[gn]||''}</p>${items.filter(t=>t.g===gn).map(todoItem).join('')}`).join('')}</div>`;}
+  let extra='';
+  if(pid==='p2')extra=`<div class="panel"><h3>会話での聞き方の例</h3><ul class="insights">${CORE.concat('purpose').map(k=>`<li><b>${Q[k].l}</b>　${esc(Q[k].ask)}</li>`).join('')}</ul><p class="note">アンケート用紙より、会話の流れで聞くほうが本音が出ます。全部聞く必要はありません。</p></div>`;
+  return `<div class="panel">${items.map(todoItem).join('')}</div>${extra}`;}
+
+/* ---- ① 数字 ---- */
+let viewMonth=ymOf(new Date()),weekRange=84,flMonth=ymOf(new Date()),dataMonth=ymOf(new Date()),kpiMonth=ymOf(new Date()),anaRange=0;
+const monthPicker=(id,val)=>`<div class="field" style="margin:0 0 12px"><label class="sr" for="${id}">表示する月</label><input type="month" id="${id}" value="${val}" data-nosave></div>`;
+const emptyBox=(msg,href,label)=>`<div class="panel empty"><p>${msg}</p>${href?`<a class="btn" href="${href}">${label}</a>`:''}</div>`;
+function vMonth(){const m=viewMonth,es=monthEntries(m),st=stats(es),pv=stats(monthEntries(prevYm(m))),s=S.settings;
+  if(!es.length)return monthPicker('mp',m)+emptyBox(`${ymLabel(m)}の売上の記録はまだありません。毎日の売上と客数を入れると、ここに分析が出ます。`,'#/entry/sales','今日の売上を記録する');
+  const biz=+s.bizDays||26,target=+s.target||0,forecast=st.avgSales*biz,prog=target?st.sales/target:null,remain=Math.max(biz-st.days,0),need=remain&&target>st.sales?(target-st.sales)/remain:null,turn=s.seats&&st.avgGuests!=null?st.avgGuests/s.seats:null;
+  return monthPicker('mp',m)+`<div class="panel"><h3>目標の進み具合<small>${st.days}/${biz}営業日</small></h3><div class="big">${yen(st.sales)}</div><div class="meter"><i style="width:${Math.min((prog||0)*100,100)}%"></i></div>
+    <div class="note" style="margin:0">${target?`目標 ${yen(target)}（達成率 ${pct(prog,1)}）`:'目標は未設定です（<a href="#/settings">設定で決める</a>）'}／着地予測 <b style="color:var(--ink)">${yen(forecast)}</b>${target?`（目標比 ${pct(forecast/target)}）`:''}</div></div>
+  <div class="panel"><h3>売上の分解<small>1日平均</small></h3><div class="kpis">
+    <div class="kv"><span>日販</span><b>${yen(st.avgSales)}</b>${delta(st.avgSales,pv.avgSales)}</div><div class="kv"><span>客数</span><b>${num(st.avgGuests,1)}人</b>${delta(st.avgGuests,pv.avgGuests)}</div>
+    <div class="kv"><span>客単価</span><b>${yen(st.ticket)}</b>${delta(st.ticket,pv.ticket)}</div><div class="kv"><span>席回転率</span><b>${turn==null?'―':num(turn,2)+'回'}</b><em class="muted">${s.seats?`客数÷${s.seats}席`:'席数を設定すると表示'}</em></div>
+    <div class="kv"><span>新規客の割合</span><b>${pct(st.newRate)}</b><em class="muted">${pv.newRate!=null?'前月 '+pct(pv.newRate):'新規客数の入力日のみ'}</em></div><div class="kv"><span>再来店率</span><b>${pct(repeatRate())}</b><em class="muted">会話メモから</em></div></div></div>
+  <div class="panel"><h3>日別の売上</h3>${chartDaily(es)}</div><div class="panel"><h3>今月の気づき</h3><ul class="insights">${monthInsights(es,st,pv,{target,need,forecast,turn}).map(t=>`<li>${t}</li>`).join('')}</ul></div>`;}
+function monthInsights(es,st,pv,o){const out=[],s=S.settings;
+  if(o.target){if(o.forecast>=o.target)out.push(`このペースなら目標は<b>達成見込み</b>です（着地予測 ${yen(o.forecast)}）。`);else if(o.need)out.push(`目標まで、残りの営業日で<b>日販 ${yen(o.need)}</b>が必要です。今の日販より<b>1日 ${yen(o.need-st.avgSales)}</b>多く売る計算です。`);}
+  if(pv.days&&st.ticket&&pv.ticket&&st.avgGuests&&pv.avgGuests){const gr=st.avgGuests/pv.avgGuests-1,tr=st.ticket/pv.ticket-1,sr=st.avgSales/pv.avgSales-1;out.push(`日販は前月比 ${signPct(sr)}。主な要因は<b>${Math.abs(gr)>=Math.abs(tr)?'客数':'客単価'}</b>です（客数 ${signPct(gr)}、客単価 ${signPct(tr)}）。`);}
+  if(s.ticket&&st.ticket){const g=st.ticket-s.ticket;out.push(g>=0?`客単価は目標を${yen(g)}上回っています。`:`客単価が目標より${yen(-g)}低いです。看板の一品やおかわりの一声で、1人あと${yen(-g)}を狙います。`);}
+  if(o.turn!=null)out.push(o.turn<1?`席回転率は${num(o.turn,2)}回で、席が埋まりきっていません。<b>客数を増やす施策</b>（④集客）が先です。`:`席回転率は${num(o.turn,2)}回で、席はよく埋まっています。次の伸びしろは<b>客単価</b>と、空いている時間帯の活用です。`);
+  const by={};es.forEach(e=>{const w=toDate(e.date).getDay();(by[w]=by[w]||[]).push(e.sales);});const av=Object.keys(by).map(w=>({w:+w,v:by[w].reduce((a,b)=>a+b,0)/by[w].length})).sort((a,b)=>b.v-a.v);
+  if(av.length>=3)out.push(`一番強いのは${WD[av[0].w]}曜（平均${man(av[0].v)}）、一番弱いのは<b>${WD[av[av.length-1].w]}曜</b>（平均${man(av[av.length-1].v)}）です。`);
+  const md=es.filter(e=>e.memo);if(md.length){const top=md.slice().sort((a,b)=>b.sales-a.sales)[0];out.push(`メモのある日で売上が最も高かったのは${toDate(top.date).getDate()}日（${esc(top.memo.slice(0,24))}）の${yen(top.sales)}です。効いたことは再現します。`);}
+  if(!out.length)out.push('記録が増えると、ここに分析が表示されます。');return out;}
+function vWeek(){const all=entries();if(!all.length)return emptyBox('まだ売上の記録がありません。4週分たまると、曜日ごとの強い・弱いがはっきり見えます。','#/entry/sales','今日の売上を記録する');
+  let es=all;if(weekRange){const last=toDate(all[all.length-1].date);last.setDate(last.getDate()-weekRange+1);es=all.filter(e=>e.date>=iso(last));}
+  const order=[1,2,3,4,5,6,0],rows=order.map(w=>{const g=es.filter(e=>toDate(e.date).getDay()===w);return Object.assign({w,n:g.length},stats(g));}),tot=stats(es).avgSales,has=rows.filter(r=>r.n);
+  let h=`<div class="field" style="margin:0 0 12px"><label class="sr" for="wr">期間</label><select id="wr" data-nosave>${[[28,'直近4週間'],[84,'直近12週間'],[182,'直近26週間'],[0,'全期間']].map(([v,l])=>`<option value="${v}" ${v===weekRange?'selected':''}>${l}</option>`).join('')}</select></div>
+  <div class="panel"><h3>曜日別の平均売上</h3>${chartBars(order.map(w=>WD[w]),rows.map(r=>r.n?r.avgSales:null),v=>Math.round(v/1000)+'千')}</div>
+  <div class="panel"><h3>曜日別の内訳</h3><div class="tw"><table><thead><tr><th>曜日</th><th>日数</th><th>平均売上</th><th>客数</th><th>客単価</th><th>全体比</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td>${WD[r.w]}</td><td>${r.n}</td><td>${yen(r.avgSales)}</td><td>${num(r.avgGuests,1)}</td><td>${yen(r.ticket)}</td><td class="${r.n?(r.avgSales>=tot?'up':'down'):''}">${r.n?pct(r.avgSales/tot):'―'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  const wx=['晴','曇','雨','雪'].map(w=>{const g=es.filter(e=>e.weather===w);return Object.assign({w,n:g.length},stats(g));}).filter(r=>r.n);
+  if(wx.length){const mx=Math.max(...wx.map(x=>x.avgSales));h+=`<div class="panel"><h3>天気別</h3><div class="dist">${wx.map(r=>`<div class="r ${r.avgSales===mx?'top':''}"><span>${r.w}（${r.n}日）</span><span class="bar"><i style="width:${r.avgSales/mx*100}%"></i></span><span class="v">${pct(r.avgSales/tot)}</span></div>`).join('')}</div><p class="note">右の数字は全体平均に対する比率です。雨の日が弱いなら、雨の日限定のLINE配信（⑤）が効きます。</p></div>`;}
+  if(has.length>=3){const s=has.slice().sort((a,b)=>b.avgSales-a.avgSales),worst=s[s.length-1];
+    h+=`<div class="panel"><h3>打ち手のヒント</h3><ul class="insights"><li><b>${WD[worst.w]}曜</b>は全体平均の${pct(worst.avgSales/tot)}です。平均並みに上げると、月に約<b>${man((tot-worst.avgSales)*4.3)}</b>の増収になります。</li><li>${WD[worst.w]}曜限定の企画（県人会の集まり、宮崎の日、団体割引など）を⑥で施策として試します。</li></ul><a class="btn ghost small" href="#/exp/new/weekday">${WD[worst.w]}曜の企画を施策に登録する</a></div>`;}
+  return h;}
+function vFL(){const m=flMonth,rec=S.months[m]||{},daysSales=sum(monthEntries(m),e=>e.sales),sales=rec.sales!=null?rec.sales:(daysSales||null);
+  const fr=sales&&rec.food!=null?rec.food/sales:null,lr=sales&&rec.labor!=null?rec.labor/sales:null,fl=fr!=null&&lr!=null?fr+lr:null,cls=(v,hi)=>v==null?'muted':v<=hi?'up':'down';
+  const hist=Object.keys(S.months).filter(k=>S.months[k]&&(S.months[k].food!=null||S.months[k].labor!=null)).sort().reverse().slice(0,12);
+  return `${monthPicker('fm',m)}<div class="panel" data-form="fl"><h3>${ymLabel(m)}の原価と人件費<small>入力すると自動で保存</small></h3>
+    <div class="field"><label for="fl-sales">月の売上<span class="hint">${daysSales?`空欄なら日々の記録の合計 ${yen(daysSales)} を使います`:'記録がない月は手入力'}</span></label><input id="fl-sales" type="number" inputmode="numeric" placeholder="${daysSales||'例：3200000'}" value="${rec.sales??''}"></div>
+    <div class="grid2"><div class="field"><label for="fl-food">原価<span class="hint">食材＋ドリンク</span></label><input id="fl-food" type="number" inputmode="numeric" value="${rec.food??''}" placeholder="例：960000"></div>
+    <div class="field"><label for="fl-labor">人件費<span class="hint">店主分も含む</span></label><input id="fl-labor" type="number" inputmode="numeric" value="${rec.labor??''}" placeholder="例：880000"></div></div></div>
+  <div class="panel"><h3>結果<small>一般的な目安と比べています</small></h3><div class="kpis"><div class="kv"><span>原価率（目安 28〜35%）</span><b class="${cls(fr,.35)}">${pct(fr,1)}</b></div><div class="kv"><span>人件費率（目安 25〜30%）</span><b class="${cls(lr,.30)}">${pct(lr,1)}</b></div><div class="kv"><span>FL比率（目安 60%以下）</span><b class="${cls(fl,.60)}">${pct(fl,1)}</b></div></div>
+    <p class="note">${fl==null?'原価と人件費を入れると計算します。':fl<=.6?'FL比率は目安の範囲内です。売上を伸ばす施策に集中できます。':`FL比率が目安を${pct(fl-.6,1)}上回っています。売上を伸ばす前に、${fr!=null&&fr>.35?'原価（仕入れ値、ロス、盛り付け量）':'人件費（シフトの組み方、暇な時間帯の人数）'}を見直すと利益が残りやすくなります。`}</p></div>
+  ${hist.length?`<div class="panel"><h3>これまでの記録</h3><div class="tw"><table><thead><tr><th>月</th><th>売上</th><th>原価率</th><th>人件費率</th><th>FL</th></tr></thead><tbody>${hist.map(k=>{const r=S.months[k],sl=r.sales!=null?r.sales:sum(monthEntries(k),e=>e.sales),f=sl&&r.food!=null?r.food/sl:null,l=sl&&r.labor!=null?r.labor/sl:null;
+    return `<tr><td>${ymLabel(k)}</td><td>${yen(sl)}</td><td>${pct(f,1)}</td><td>${pct(l,1)}</td><td class="${f!=null&&l!=null?(f+l<=.6?'up':'down'):''}">${f!=null&&l!=null?pct(f+l,1):'―'}</td></tr>`;}).join('')}</tbody></table></div></div>`:''}`;}
+function vData(){const m=dataMonth,es=monthEntries(m);if(!es.length)return monthPicker('dm',m)+emptyBox(`${ymLabel(m)}の売上の記録はありません。`,'#/entry/sales','今日の売上を記録する');const st=stats(es);
+  return monthPicker('dm',m)+`<div class="panel"><h3>${ymLabel(m)}の記録<small>行をタップで編集</small></h3><div class="tw"><table><thead><tr><th>日付</th><th>売上</th><th>客数</th><th>客単価</th><th>天気</th><th style="text-align:left">メモ</th></tr></thead><tbody>
+  ${es.map(e=>{const d=toDate(e.date);return `<tr class="click" data-act="editDay" data-date="${e.date}" tabindex="0"><td>${d.getDate()}日(${WD[d.getDay()]})</td><td>${yen(e.sales)}</td><td>${num(e.guests)}</td><td>${e.guests?yen(e.sales/e.guests):'―'}</td><td>${esc(e.weather)||'―'}</td><td class="memo">${esc(e.memo)}</td></tr>`;}).join('')}
+  <tr><td><b>合計</b></td><td><b>${yen(st.sales)}</b></td><td><b>${num(st.guests)}</b></td><td><b>${yen(st.ticket)}</b></td><td></td><td></td></tr></tbody></table></div></div>`;}
+
+/* ---- ② 会話メモ ---- */
+function chipGroup(key,sel,prefix){const q=Q[key],a=[].concat(sel||[]);
+  return `<div class="chips" role="${q.multi?'group':'radiogroup'}" aria-label="${q.l}">${q.opts.map((o,i)=>`<input type="checkbox" data-q="${key}" data-multi="${q.multi?1:0}" id="${prefix}${key}${i}" value="${esc(o)}" ${a.includes(o)?'checked':''}><label for="${prefix}${key}${i}">${o}</label>`).join('')}</div>`;}
+function qBlock(key,t,prefix){const q=Q[key],hide=key==='from'&&!['宮崎出身','宮崎にゆかり'].includes(t.seg);
+  return `<div class="qblock" id="${prefix}qb-${key}" ${hide?'hidden':''}><span class="flabel">${q.l}${q.ask?`<em>${esc(q.ask)}</em>`:''}</span>${chipGroup(key,t[key],prefix)}</div>`;}
+function custOptions(sel){return `<option value="">（選ばない）</option>`+S.custs.slice().sort((a,b)=>(a.kana||a.name||'').localeCompare(b.kana||b.name||'','ja')).map(c=>`<option value="${c.id}" ${c.id===sel?'selected':''}>${esc(c.name)}${c.company?'（'+esc(c.company)+'）':''}</option>`).join('');}
+let presetCust=null;
+function talkForm(t){t=t||{};const cid=t.custId||presetCust||'';presetCust=null;
+  return `<div class="panel" id="talkform" data-form="talk" data-id="${t.id||''}"><h3>${t.id?'会話メモ':'新しい会話メモ'}<small>聞けたところだけタップ</small></h3>
+    ${S.custs.length?`<div class="qblock"><label class="flabel" for="t-cust">お客様台帳の方なら<em>名前が分かるときだけ</em></label><select id="t-cust">${custOptions(cid)}</select></div>`:''}
+    ${CORE.map(k=>qBlock(k,t,'t-')).join('')}<p class="subhead">会話で分かったら</p>${MORE.map(k=>qBlock(k,t,'t-')).join('')}
+    <div class="qblock"><label class="flabel" for="t-note">印象に残った一言<em>言葉のまま</em></label><textarea id="t-note" placeholder="例：宮崎の言葉が聞けて落ち着く">${esc(t.note||'')}</textarea></div>
+    <div class="qblock"><label class="flabel" for="t-date">日付</label><input type="date" id="t-date" value="${t.date||today()}"></div>
+    <div class="savebar"><span class="st-line" id="talk-st">${t.id?'入力した内容は自動で保存されています':'タップした時点で自動で保存されます'}</span><button class="btn sun" data-act="nextTalk">次のお客さんへ</button></div>
+    ${t.id?`<button class="btn danger block" style="margin-top:8px" data-act="delTalk" data-id="${t.id}">この会話メモを削除</button>`:''}</div>`;}
+const talkTags=t=>Object.keys(Q).flatMap(k=>[].concat(t[k]||[])).filter(Boolean).map(v=>`<span>${esc(v)}</span>`).join('');
+function vTalkList(){const list=S.talks.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.at||0)-(a.at||0)).slice(0,40);
+  return `<a class="btn block" href="#/entry/talk" style="margin-bottom:12px">会話メモを書く</a>${list.length?`<div class="panel"><h3>最近の会話メモ<small>${S.talks.length}組</small></h3>${list.map(talkRow).join('')}</div>`:emptyBox('まだ会話メモがありません。お見送りの後に、聞けたことをタップで残します。')}`;}
+function talkRow(t){const c=t.custId&&S.custs.find(x=>x.id===t.custId);
+  return `<div class="talkrow"><div><b>${t.date?t.date.slice(5).replace('-','/'):''}</b>　${c?`<b>${esc(c.name)}</b>さん　`:''}${esc(t.seg||'')}${t.from?'・'+esc(t.from):''}<div class="tg">${talkTags(Object.assign({},t,{seg:null,from:null}))}</div>${t.note?`<div class="muted" style="margin-top:4px">「${esc(t.note)}」</div>`:''}</div><a class="btn ghost small" href="#/entry/talk/${t.id}">開く</a></div>`;}
+const inRange=t=>!anaRange||(daysAgo(t.date)??999)<anaRange;
+function countBy(key,list){const c={};let n=0;list.forEach(t=>{const v=[].concat(t[key]||[]).filter(Boolean);if(v.length)n++;v.forEach(x=>c[x]=(c[x]||0)+1);});return{n,rows:Q[key].opts.map(o=>({k:o,v:c[o]||0}))};}
+function distHtml(d,zero){if(!d.n)return'<p class="note" style="margin:0">まだ記録がありません。</p>';const rows=d.rows.filter(r=>r.v||zero),mx=Math.max(...rows.map(r=>r.v));
+  return `<div class="dist">${rows.map(r=>`<div class="r ${r.v===mx&&mx?'top':''}"><span>${r.k}</span><span class="bar"><i style="width:${mx?r.v/mx*100:0}%"></i></span><span class="v">${pct(r.v/d.n)}</span></div>`).join('')}</div>`;}
+const topOf=(key,list,k=1)=>countBy(key,list).rows.filter(r=>r.v).sort((a,b)=>b.v-a.v).slice(0,k);
+function repeatRate(list){list=(list||S.talks).filter(x=>x.vis);return list.length?list.filter(x=>x.vis!=='初めて').length/list.length:null;}
+function vTalkAna(){const all=S.talks.filter(inRange),n=all.length;
+  const rangeSel=`<div class="field" style="margin:0 0 12px"><label class="sr" for="ar">期間</label><select id="ar" data-nosave>${[[0,'全期間'],[30,'直近30日'],[90,'直近90日']].map(([v,l])=>`<option value="${v}" ${v===anaRange?'selected':''}>${l}</option>`).join('')}</select></div>`;
+  if(!n)return rangeSel+emptyBox('会話メモがまだありません。20組分たまると、客層と来る理由の傾向が見えてきます。','#/entry/talk','会話メモを書く');
+  const seg=countBy('seg',all),ch=countBy('ch',all),ins=[],ts=topOf('seg',all)[0],tc=topOf('ch',all)[0];
+  if(ts)ins.push(`最も多い客層は<b>${ts.k}</b>（${pct(ts.v/seg.n)}）です。`);if(tc)ins.push(`知ったきっかけで最も多いのは<b>${tc.k}</b>（${pct(tc.v/ch.n)}）です。`);
+  const reg=Q.seg.opts.map(s=>{const g=all.filter(t=>t.seg===s&&t.vis);return{s,n:g.length,r:g.length?g.filter(t=>t.vis==='5回以上').length/g.length:0};}).filter(x=>x.n>=3).sort((a,b)=>b.r-a.r)[0];
+  if(reg&&reg.r>0)ins.push(`常連（5回以上）の割合が最も高いのは<b>${reg.s}</b>（${pct(reg.r)}）です。この客層が店の土台です。`);
+  const rr=repeatRate(all);if(rr!=null)ins.push(rr<.4?`再来店の割合は${pct(rr)}と低めです。⑤リピートの仕組みが最優先です。`:`再来店の割合は${pct(rr)}です。常連に支えられている分、新しい入口（④）を増やす余地があります。`);
+  const w=countBy('wants',all),wTop=w.rows.filter(r=>r.k!=='特になし'&&r.v).sort((a,b)=>b.v-a.v)[0];if(wTop&&w.n&&wTop.v/w.n>=.15)ins.push(`要望で多いのは<b>${wTop.k}</b>（要望を聞けた組の${pct(wTop.v/w.n)}）です。すぐ直せるものから手を打ちます。`);
+  const sat=countBy('sat',all),low=sat.rows.find(r=>r.k==='いまひとつ');if(sat.n>=5&&low.v/sat.n>=.15)ins.push(`「いまひとつ」が${pct(low.v/sat.n)}あります。その組の要望と一言を確認します。`);
+  if(n<20)ins.push(`まだ${n}組分です。あと${20-n}組で傾向がはっきりします。`);
+  const personas=Q.seg.opts.map(s=>{const g=all.filter(t=>t.seg===s);if(!g.length)return'';const p=topOf('purpose',g)[0],lk=topOf('likes',g,2),tp=topOf('topics',g)[0],c=topOf('ch',g)[0],ag=topOf('age',g)[0],r=repeatRate(g);
+    return `<div class="persona"><div class="h"><b>${s}</b><span class="muted">${g.length}組（${pct(g.length/n)}）</span></div><dl>${ag?`<dt>多い年代</dt><dd>${ag.k}</dd>`:''}${p?`<dt>主な来店</dt><dd>${p.k}</dd>`:''}${lk.length?`<dt>喜ぶもの</dt><dd>${lk.map(x=>x.k).join('、')}</dd>`:''}${tp?`<dt>盛り上がる話題</dt><dd>${tp.k}</dd>`:''}${c?`<dt>知ったきっかけ</dt><dd>${c.k}</dd>`:''}${r!=null?`<dt>再来店</dt><dd>${pct(r)}</dd>`:''}</dl></div>`;}).join('');
+  const quotes=all.filter(t=>(t.note||'').trim()).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10);
+  const block=(key,title,zero)=>`<div class="panel"><h3>${title}<small>${countBy(key,all).n}組が回答</small></h3>${distHtml(countBy(key,all),zero)}</div>`;
+  return rangeSel+`<div class="panel"><h3>分かったこと<small>${n}組分</small></h3><ul class="insights">${ins.map(t=>`<li>${t}</li>`).join('')}</ul></div>
+  <div class="panel"><h3>客層ごとの特徴</h3>${personas}<p class="note">売上を支える客層に合わせて、メニューの推し方、LINEの話題、集客の入口を変えます。</p></div>
+  ${block('seg','宮崎とのご縁',true)}${block('from','宮崎のどちらから')}${block('vis','来店回数',true)}${block('ch','知ったきっかけ')}${block('purpose','誰と・どんな集まり')}${block('age','年代')}${block('likes','喜んでいたもの')}${block('topics','盛り上がった話題')}${block('wants','要望・気になる点')}${block('sat','満足度',true)}
+  ${quotes.length?`<div class="panel"><h3>お客さんの言葉<small>③の一言づくりのヒントになります</small></h3><ul class="insights">${quotes.map(q=>`<li>「${esc(q.note)}」<span class="muted">（${esc(q.seg||'')}${q.from?'・'+esc(q.from):''}）</span></li>`).join('')}</ul></div>`:''}`;}
+
+/* ============ お客様台帳 ============ */
+let custQuery='';
+function vCust(a,b){
+  if(a==='ana')return header('お客さん')+custSeg('ana')+vTalkAna();
+  if(a&&a!=='f'&&a!=='new')return vCustDetail(a);
+  if(a==='new')return header('お客さん')+custSeg('list')+custForm(null);
+  const f=a==='f'&&CF[b]?b:'all';
+  const list=S.custs.filter(c=>custFilter(f,c)).sort((x,y)=>(lastSeen(y)||'').localeCompare(lastSeen(x)||''));
+  const sleep=S.custs.filter(isSleeping).length,bd=S.custs.filter(bdayThisMonth).length;
+  return header('お客さん')+custSeg('list')+
+  `<div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <label class="sr" for="c-q">お客様を探す</label><input id="c-q" data-nosave type="search" value="${esc(custQuery)}" placeholder="名前・会社・特徴・出身地で探す" autocomplete="off"></div>
+  <div class="filters">${Object.entries(CF).map(([k,l])=>`<a href="#/cust/f/${k}" class="${k===f?'on':''}">${l}${k==='sleep'&&sleep?` ${sleep}`:k==='bday'&&bd?` ${bd}`:''}</a>`).join('')}</div>
+  ${!S.custs.length?`<div class="panel empty"><p>名刺を交換した方や常連さんを登録しておくと、名前を忘れても「見た目の特徴」「会社」「出身地」から探せます。</p><a class="btn" href="#/cust/new">お客様を登録する</a></div>`
+   :`${f==='sleep'&&list.length?`<div class="callout">60日以上来ていない常連さんです。LINEや手紙で、近況と季節のおすすめを送ってみましょう。</div>`:''}
+   <div class="clist" id="clist">${list.map(custRow).join('')||'<p class="note" style="padding:16px;margin:0">当てはまるお客様はいません。</p>'}</div>
+   <p class="note" id="c-none" hidden style="text-align:center">見つかりません。言葉を変えて探すか、新しく登録してください。</p>
+   <a class="btn block" href="#/cust/new">お客様を登録する</a>`}`;}
+const custSeg=on=>`<div class="seg" role="tablist"><a href="#/cust" class="${on==='list'?'on':''}" role="tab" aria-selected="${on==='list'}">お客様台帳</a><a href="#/cust/ana" class="${on==='ana'?'on':''}" role="tab" aria-selected="${on==='ana'}">会話の分析</a></div>`;
+function avatar(c,big){return `<span class="av ${big?'big':''}" ${c.hasPhoto?`data-photo="${c.id}"`:''}>${esc(initial(c))}</span>`;}
+function custRow(c){const ls=lastSeen(c),v=custVisits(c).length;
+  return `<a class="crow" href="#/cust/${c.id}" data-text="${esc(custText(c))}">${avatar(c)}<span style="min-width:0"><div class="nm">${esc(c.name)}${c.kana?`<small>${esc(c.kana)}</small>`:''}</div>
+    <div class="sb">${esc([c.company,c.title].filter(Boolean).join('　'))||esc([c.seg,c.from].filter(Boolean).join('・'))||'　'}</div>${c.feature?`<div class="ft">${esc(c.feature)}</div>`:''}</span>
+    <span class="rt"><b>${agoLabel(ls)}</b>来店${v}回${isSleeping(c)?'<br><span class="tag warn">しばらく来ていない</span>':''}</span></a>`;}
+function custForm(c){c=c||{};
+  return `<div class="panel" data-form="cust" id="custform" data-id="${c.id||''}"><h3>${c.id?'お客様の情報':'お客様を登録'}<small>入力すると自動で保存</small></h3>
+    <div class="grid2"><div class="field"><label for="c-name">お名前</label><input id="c-name" value="${esc(c.name||'')}" placeholder="例：日高 健一" autocomplete="off"></div>
+    <div class="field"><label for="c-kana">ふりがな</label><input id="c-kana" value="${esc(c.kana||'')}" placeholder="ひだか けんいち" autocomplete="off"></div></div>
+    <div class="grid2"><div class="field"><label for="c-company">会社・所属</label><input id="c-company" value="${esc(c.company||'')}" autocomplete="off"></div>
+    <div class="field"><label for="c-title">役職</label><input id="c-title" value="${esc(c.title||'')}" autocomplete="off"></div></div>
+    <div class="field"><label for="c-feature">見た目・覚え方の特徴<span class="hint">名前を忘れたときの手がかり</span></label><input id="c-feature" value="${esc(c.feature||'')}" placeholder="例：丸眼鏡、声が大きい、いつもカウンター右端" autocomplete="off"></div>
+    <div class="qblock"><span class="flabel">お客様の種類<em>複数可</em></span>${chipGroup('ctag',c.ctag,'c-')}</div>
+    ${qBlock('seg',c,'c-')}${qBlock('from',c,'c-')}
+    <div class="qblock"><span class="flabel">好きなもの<em>複数可</em></span>${chipGroup('likes',c.likes,'c-')}</div>
+    <div class="grid2"><div class="field"><label for="c-dislikes">苦手なもの・アレルギー</label><input id="c-dislikes" value="${esc(c.dislikes||'')}" autocomplete="off"></div>
+    <div class="field"><label for="c-bmonth">誕生月</label><select id="c-bmonth"><option value="">―</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${+c.bmonth===i+1?'selected':''}>${i+1}月</option>`).join('')}</select></div></div>
+    <div class="grid2"><div class="field"><label for="c-met">名刺交換・初対面の日</label><input type="date" id="c-met" value="${c.metAt||(c.id?'':today())}"></div>
+    <div class="field"><label for="c-ref">紹介者</label><input id="c-ref" value="${esc(c.referrer||'')}" autocomplete="off"></div></div>
+    <div class="field"><label for="c-memo">メモ<span class="hint">話したこと、家族、仕事の話など</span></label><textarea id="c-memo">${esc(c.memo||'')}</textarea></div>
+    <div class="btns"><button class="btn ghost" data-act="photo" ${c.id?'':'disabled'}>${c.hasPhoto?'名刺・写真を撮り直す':'名刺・写真を撮る'}</button></div>
+    <p class="note" id="cust-st">${c.id?'入力した内容は自動で保存されています。':'お名前を入れた時点で自動で保存されます。写真は保存後に撮れます。'}</p></div>`;}
+function vCustDetail(id){const c=S.custs.find(x=>x.id===id);
+  if(!c)return `<a class="back" href="#/cust">‹ お客様台帳</a>`+emptyBox('このお客様は見つかりませんでした。','#/cust','台帳に戻る');
+  const vs=custVisits(c),talks=custTalks(c).sort((a,b)=>(b.date||'').localeCompare(a.date||'')),todayIn=(c.visits||[]).includes(today());
+  return `<a class="back" href="#/cust">‹ お客様台帳</a>${demoBar()}
+  <div class="chead">${avatar(c,true)}<div><h1>${esc(c.name)}${c.kana?`<span class="muted" style="font-size:13px;font-weight:400;margin-left:6px">${esc(c.kana)}</span>`:''}</h1>
+    <div class="sb">${esc([c.company,c.title].filter(Boolean).join('　'))}</div><div class="sb">最後に会った日：${agoLabel(lastSeen(c))}　来店${vs.length}回</div></div></div>
+  <div class="btns" style="margin-bottom:12px"><button class="btn ${todayIn?'ghost':''}" data-act="visit" data-id="${c.id}">${todayIn?'今日の来店を取り消す':'今日来店した'}</button><a class="btn ghost" href="#/entry/talk/new/${c.id}">この方の会話メモ</a></div>
+  ${c.hasPhoto?`<div class="panel"><h3>名刺・写真</h3><img class="photo" alt="${esc(c.name)}さんの名刺・写真" data-photo-full="${c.id}"><button class="btn ghost small" data-act="delPhoto" data-id="${c.id}">写真を削除</button></div>`:''}
+  ${custForm(c)}
+  <div class="panel"><h3>来店の記録<small>${vs.length}回</small></h3>${vs.length?`<div class="vlist">${vs.slice().reverse().map(d=>`<span>${d.replace(/-/g,'/')}${(c.visits||[]).includes(d)?`<button data-act="unvisit" data-id="${c.id}" data-date="${d}" aria-label="${d}の来店を消す">×</button>`:''}</span>`).join('')}</div>`:'<p class="note" style="margin:0">「今日来店した」を押すか、この方の会話メモを書くと記録されます。</p>'}</div>
+  ${talks.length?`<div class="panel"><h3>この方の会話メモ</h3>${talks.map(talkRow).join('')}</div>`:''}
+  <button class="btn danger block" data-act="delCust" data-id="${c.id}">このお客様を台帳から削除</button>`;}
+
+/* ---- ③④⑤ ---- */
+const QS=[['why','常連さんは、なぜ通い続けてくれていますか？','会話メモの「お客さんの言葉」をそのまま書き写すのが一番です。'],['owner','店主・スタッフにしかないものは何ですか？','出身地、経歴、話し方、こだわり、人柄など。'],['only','このお店でしか起きないことは何ですか？','宮崎の話で知らない人同士が盛り上がる、方言が飛び交う、など。'],['win','他の宮崎料理店と比べて、負けないものは何ですか？','料理以外も含めて。迷ったら常連さんに聞いてみます。']];
+function vSheet(){const v=S.value,a=v.answers||{},quotes=S.talks.filter(t=>(t.note||'').trim()).slice(-4).reverse();
+  return `${v.adopted?`<div class="adopted"><span>採用した一言</span><p>${esc(v.adopted)}</p></div>`:''}${quotes.length?`<div class="callout"><b>最近のお客さんの言葉</b><br>${quotes.map(q=>`「${esc(q.note)}」`).join('<br>')}</div>`:''}
+  <div class="panel"><h3>4つの問い<small>入力すると自動で保存</small></h3>${QS.map(([k,q,h])=>`<div class="field"><label for="q-${k}">${q}</label><textarea id="q-${k}" data-answer="${k}" data-nosave placeholder="${h}">${esc(a[k]||'')}</textarea></div>`).join('')}</div>
+  <div class="panel"><h3>一言を組み立てる</h3><div class="field"><label for="b-who">誰が</label><input id="b-who" data-build data-nosave placeholder="例：宮崎を離れて暮らす人が"></div><div class="field"><label for="b-what">何をできる</label><input id="b-what" data-build data-nosave placeholder="例：宮崎の言葉で話せる"></div><div class="field"><label for="b-how">どんな店</label><input id="b-how" data-build data-nosave placeholder="例：東京の実家みたいな店"></div>
+    <div class="preview" id="b-prev" aria-live="polite"><span class="muted">ここに一言が表示されます</span></div><button class="btn block" data-act="addCand">候補に追加する</button><p class="note">型の例：「宮崎を離れた人が、帰ってこられる店」「宮崎好きが、旅の続きを味わえる店」。25文字くらいに収めると覚えてもらえます。</p></div>
+  <div class="panel"><h3>候補<small>${v.cands.length}件</small></h3>${v.cands.length?v.cands.map((c,i)=>`<div class="cand"><p>${esc(c)}</p>${c===v.adopted?'<span class="tag auto">採用中</span>':`<button class="btn ghost small" data-act="adopt" data-i="${i}">採用</button>`}<button class="btn ghost small" data-act="delCand" data-i="${i}" aria-label="この候補を削除">削除</button></div>`).join(''):'<p class="note" style="margin:0">上のツールで候補を作ると、ここに並びます。3つ作ったら常連さんに選んでもらいます。</p>'}</div>`;}
+function vChannelRes(){const ch=countBy('ch',S.talks);if(!ch.n)return emptyBox('会話メモで「知ったきっかけ」を残すと、どの入口が効いているかが分かります。','#/entry/talk','会話メモを書く');
+  const g=ch.rows.find(r=>r.k==='Googleマップ'),gr=g.v/ch.n,ref=ch.rows.find(r=>r.k==='県人会・紹介'),rr=ref.v/ch.n,gs=ch.rows.find(r=>r.k==='グルメサイト'),ins=[];
+  ins.push(gr<.2?`Googleマップ経由は${pct(gr)}にとどまっています。写真と口コミを増やすと、最も伸ばしやすい入口です。`:`Googleマップ経由が${pct(gr)}あります。口コミへの返信と写真の追加で、この入口を太くします。`);
+  if(rr>=.25)ins.push(`県人会・紹介が${pct(rr)}と大きな柱です。幹事特典や紹介特典で、この流れを仕組みにできます。`);if(gs.v/ch.n<.1)ins.push(`グルメサイト経由は${pct(gs.v/ch.n)}です。有料掲載をしているなら、費用に見合っているか確認します。`);
+  const bySeg=Q.seg.opts.map(s=>{const t=topOf('ch',S.talks.filter(x=>x.seg===s))[0];return t?`<li><b>${s}</b>は「${t.k}」から来ることが多いです。</li>`:'';}).join('');
+  return `<div class="panel"><h3>お客さんが店を知ったきっかけ<small>${ch.n}組分</small></h3>${distHtml(ch,true)}</div><div class="panel"><h3>読み取れること</h3><ul class="insights">${ins.map(t=>`<li>${t}</li>`).join('')}${bySeg}</ul></div>`;}
+const TPL=[['会計時のLINE登録の声かけ','よかったらLINEのお友だちになってもらえませんか？\n宮崎から珍しい焼酎や食材が入ったときにお知らせしています。\n登録していただいた方には、次回一品サービスしてます。'],
+ ['口コミのお願い（卓上カード）','今日の宮崎の味はいかがでしたか？\nよかったら、Googleマップで一言感想をいただけると励みになります。\n店主一同、全部読んでいます。'],
+ ['次回来店特典カード','またのご来店をお待ちしています。\nこのカードで、次回「宮崎の一品」をサービスします。\n有効期限：◯月◯日まで'],
+ ['しばらく来ていない常連さんへ','◯◯さん、ご無沙汰しています。みやこんじょの◯◯です。\n宮崎から◯◯が入りました。◯◯さんのお好きな◯◯もご用意しています。\nお近くにお越しの際は、ぜひ顔を見せてください。'],
+ ['LINE配信：入荷のお知らせ','【宮崎から届きました】\n今週は日南の◯◯と、地鶏のもも炭火焼の特大サイズが入っています。\n数量限定です。ご予約はこのLINEに返信でどうぞ。'],
+ ['LINE配信：雨の日特典','今日は雨ですね。\n雨の日限定で、本日ご来店の方に焼酎一杯サービスします。\nこのメッセージを見せてください（本日のみ）。'],
+ ['県人会・幹事向けのご案内','宮崎ご出身の方の集まりに、ぜひ使ってください。\n◯名様以上で、飲み放題付きプランを◯円でご用意しています。\n幹事様には次回使えるお食事券をお渡しします。']];
+function vTpl(){return `<div class="panel"><h3>そのまま使える文例<small>コピーして店の言葉に直してください</small></h3>${TPL.map(([t,b],i)=>`<div class="tpl"><div class="h"><b>${t}</b><button class="btn ghost small" data-act="copy" data-i="${i}">コピー</button></div><pre id="tpl-${i}">${esc(b)}</pre></div>`).join('')}</div>`;}
+function vRepeatKpi(){const hist=Object.keys(S.months).filter(k=>S.months[k]&&S.months[k].line!=null).sort(),rec=S.months[kpiMonth]||{},rr=repeatRate(),vis=countBy('vis',S.talks),last=hist.slice(-6),vals=last.map(k=>S.months[k].line),grow=last.length>=2?vals[vals.length-1]-vals[vals.length-2]:null;
+  const reg=S.custs.filter(isRegular).length,sl=S.custs.filter(isSleeping).length;
+  return `<div class="panel" data-form="line"><h3>LINEの友だち数<small>入力すると自動で保存</small></h3><div class="grid2"><div class="field"><label for="km">月</label><input type="month" id="km" value="${kpiMonth}" data-nosave></div><div class="field"><label for="k-line">月末の友だち数</label><input id="k-line" type="number" inputmode="numeric" value="${rec.line??''}" placeholder="例：120"></div></div>
+    ${last.length?chartBars(last.map(k=>+k.slice(5)+'月'),vals,v=>Math.round(v)+'人'):''}${grow!=null?`<p class="note">先月から <b class="${grow>=0?'up':'down'}">${grow>=0?'+':''}${grow}人</b>。${grow<10?'声かけが止まっていないか、スタッフ全員で確認します。':'声かけが続いています。'}</p>`:''}</div>
+  <div class="panel"><h3>常連さんの状況<small>お客様台帳から</small></h3><div class="kpis"><div class="kv"><span>台帳の人数</span><b>${S.custs.length}人</b></div><div class="kv"><span>常連さん</span><b>${reg}人</b></div><div class="kv"><span>しばらく来ていない常連</span><b class="${sl?'down':''}">${sl}人</b>${sl?'<em><a href="#/cust/f/sleep">一覧を見る</a></em>':''}</div></div></div>
+  <div class="panel"><h3>再来店の割合<small>会話メモ${vis.n}組分から</small></h3><div class="big">${pct(rr)}</div>${distHtml(vis,true)}<p class="note">2回目以降のお客さんの割合です。初めての人が多いのに再来店が少ない場合は、2回目の来店特典が最も効きます。</p></div>`;}
+
+/* ---- ⑥ 施策 ---- */
+const MET={sales:['売上','円'],guests:['客数','人'],newGuests:['新規客数','人'],other:['その他（手入力）','']};
+const EXT={event:{name:'交流会イベント',pillar:'p4',metric:'sales',hypo:'宮崎ゆかりの人が集まる交流会を開けば、新しいお客さんが増え、本店の常連につながる'},weekday:{name:'平日の企画',pillar:'p1',metric:'sales',hypo:'弱い曜日に限定の企画を出せば、その曜日の売上が全体平均に近づく'},
+  review:{name:'口コミ強化週間',pillar:'p4',metric:'newGuests',hypo:'お会計時に口コミをお願いすれば、口コミが増え、Googleマップ経由の新規客が増える'},line:{name:'LINE登録キャンペーン',pillar:'p5',metric:'other',hypo:'登録特典を付けて全員に声かけすれば、1か月で友だちが大きく増える'}};
+function expStatus(x){const t=today();if(x.start&&t<x.start)return{k:'plan',l:'準備中'};if(!x.end||t<=x.end)return{k:'run',l:'実施中'};return (x.review||'').trim()?{k:'done',l:'完了'}:{k:'wait',l:'振り返り待ち'};}
+function expResult(x){if(!x.start||!x.end)return null;const inP=entries().filter(e=>e.date>=x.start&&e.date<=x.end),from=toDate(x.start);from.setDate(from.getDate()-28);
+  const base=entries().filter(e=>e.date>=iso(from)&&e.date<x.start),key=['sales','guests','newGuests'].includes(x.metric)?x.metric:null;let actual=null,expected=null;
+  if(key){actual=sum(inP,e=>e[key]);const bw={};base.forEach(e=>{if(e[key]==null)return;const w=toDate(e.date).getDay();(bw[w]=bw[w]||[]).push(e[key]);});let ok=true,ex=0;inP.forEach(e=>{const a=bw[toDate(e.date).getDay()];if(!a){ok=false;return;}ex+=a.reduce((p,c)=>p+c,0)/a.length;});expected=ok&&inP.length?ex:null;}
+  else actual=x.manual!=null&&x.manual!==''?+x.manual:null;return{days:inP.length,actual,expected,lift:expected!=null?actual-expected:null};}
+const fmtMet=(m,v)=>v==null?'―':m==='sales'?yen(v):num(v)+(MET[m]?MET[m][1]:'');
+const md=s=>s?s.slice(5).replace('-','/'):'';
+function vExpList(){const xs=S.exps.slice().sort((a,b)=>(b.start||'').localeCompare(a.start||''));
+  const top=`<div class="panel"><h3>施策を登録</h3><a class="btn block" href="#/exp/new">新しい施策を登録する</a><p class="flabel" style="margin:14px 0 8px">テンプレートから作る</p><div class="btns">${Object.entries(EXT).map(([k,v])=>`<a class="btn ghost small" href="#/exp/new/${k}">${v.name}</a>`).join('')}</div></div>`;
+  if(!xs.length)return top+`<div class="panel empty"><p>まだ施策がありません。最初の1つは、11月の交流会のように日程が決まっているものがおすすめです。</p></div>`;
+  return top+xs.map(x=>{const s=expStatus(x),r=expResult(x),m=x.metric||'sales',ach=r&&r.actual!=null&&x.goal?r.actual/x.goal:null;
+    return `<a class="exp" href="#/exp/${x.id}"><div class="h"><div><b>${esc(x.name)}</b><div class="d">${x.start?md(x.start):'未定'}〜${md(x.end)}　${PM[x.pillar]?PM[x.pillar].n+'. '+PM[x.pillar].name:''}</div></div><span class="st ${s.k}">${s.l}</span></div>
+    ${r&&(r.days||m==='other')?`<div class="res"><div><span>${MET[m][0]}</span><b>${fmtMet(m,r.actual)}</b></div>${x.goal?`<div><span>目標比</span><b class="${ach>=1?'up':'down'}">${pct(ach)}</b></div>`:''}${r.lift!=null?`<div><span>いつもとの差</span><b class="${r.lift>=0?'up':'down'}">${r.lift>=0?'+':''}${fmtMet(m,r.lift)}</b></div>`:''}</div>`:''}</a>`;}).join('');}
+function vExpForm(id,tplKey){const isNew=id==='new',x=isNew?Object.assign({id:'',name:'',pillar:'p4',metric:'sales',hypo:'',start:'',end:'',goal:null,cost:null,manual:null,review:''},EXT[tplKey]||{}):S.exps.find(e=>e.id===id);
+  if(!x)return `<a class="back" href="#/p/p6/list">‹ 施策</a>`+emptyBox('この施策は見つかりませんでした。','#/p/p6/list','施策一覧へ');
+  const res=isNew?null:expResult(x),m=x.metric||'sales',s=isNew?null:expStatus(x),ach=res&&res.actual!=null&&x.goal?res.actual/x.goal:null;
+  return `<a class="back" href="#/p/p6/list">‹ 施策</a>${demoBar()}<div class="phead"><h1>${isNew?'施策を登録':esc(x.name)}</h1>${s?` <span class="st ${s.k}" style="vertical-align:4px">${s.l}</span>`:''}<p>${isNew?'施策名を入れた時点で自動で保存されます。先に目標を決めておくと、終わったときに成果を自動で計算します。':''}</p></div>
+  ${res&&(res.days||m==='other')?`<div class="panel"><h3>成果<small>${res.days}日分の記録から</small></h3><div class="kpis"><div class="kv"><span>${MET[m][0]}（実績）</span><b>${fmtMet(m,res.actual)}</b></div><div class="kv"><span>目標</span><b>${x.goal?fmtMet(m,+x.goal):'―'}</b>${ach!=null?`<em class="${ach>=1?'up':'down'}">達成率 ${pct(ach)}</em>`:''}</div>
+    <div class="kv"><span>いつもとの差</span><b class="${res.lift>=0?'up':'down'}">${res.lift==null?'―':(res.lift>=0?'+':'')+fmtMet(m,res.lift)}</b><em class="muted">直前4週の同じ曜日と比較</em></div>${x.cost?`<div class="kv"><span>費用</span><b>${yen(+x.cost)}</b>${m==='sales'&&res.lift!=null?`<em class="${res.lift-x.cost>=0?'up':'down'}">差し引き ${yen(res.lift-x.cost)}</em>`:''}</div>`:''}</div>
+    ${m==='sales'&&res.lift!=null&&x.cost?'<p class="note">差し引きは売上ベースです。利益で見るなら、増えた売上から原価分を引いて考えます。</p>':''}</div>`:''}
+  <div class="panel" data-form="exp" id="expform" data-id="${x.id}"><div class="field"><label for="x-name">施策名</label><input id="x-name" value="${esc(x.name)}" placeholder="例：宮崎ゆかりナイト 11月"></div>
+    <div class="field"><label for="x-hypo">仮説<span class="hint">〜すれば、〜が増える</span></label><textarea id="x-hypo">${esc(x.hypo)}</textarea></div>
+    <div class="grid2"><div class="field"><label for="x-start">開始日</label><input type="date" id="x-start" value="${x.start||''}"></div><div class="field"><label for="x-end">終了日</label><input type="date" id="x-end" value="${x.end||''}"></div></div>
+    <div class="grid2"><div class="field"><label for="x-pillar">取り組み</label><select id="x-pillar">${P.slice(0,5).map(p=>`<option value="${p.id}" ${p.id===x.pillar?'selected':''}>${p.n}. ${p.name}</option>`).join('')}</select></div><div class="field"><label for="x-metric">何で測るか</label><select id="x-metric">${Object.entries(MET).map(([k,v])=>`<option value="${k}" ${k===m?'selected':''}>${v[0]}</option>`).join('')}</select></div></div>
+    <div class="grid2"><div class="field"><label for="x-goal">目標値<span class="hint">期間合計</span></label><input id="x-goal" type="number" inputmode="numeric" value="${x.goal??''}" placeholder="例：300000"></div><div class="field"><label for="x-cost">費用（円）</label><input id="x-cost" type="number" inputmode="numeric" value="${x.cost??''}" placeholder="例：15000"></div></div>
+    <div class="field"><label for="x-manual">実績の手入力<span class="hint">「その他」で測る場合（LINE登録数など）</span></label><input id="x-manual" type="number" inputmode="numeric" value="${x.manual??''}"></div>
+    <div class="field"><label for="x-review">振り返り<span class="hint">目標との差、次にどうするか</span></label><textarea id="x-review" placeholder="例：参加者は目標を超えたが、本店への再来店は2組だけ。次回は特典カードを渡す">${esc(x.review||'')}</textarea></div>
+    <p class="note" id="exp-st">${isNew?'施策名を入れると自動で保存されます。':'入力した内容は自動で保存されています。'}</p>
+    ${isNew?'':`<button class="btn danger block" style="margin-top:10px" data-act="delExp" data-id="${x.id}">この施策を削除</button>`}</div>`;}
+
+/* ============ 記録 ============ */
+function vEntry(tab,arg,arg2){
+  if(!['talk','cust','sales'].includes(tab))tab=pref.entryTab||'talk';if(pref.entryTab!==tab){pref.entryTab=tab;savePref();}
+  const seg=`<div class="seg" role="tablist">${[['talk','会話メモ'],['cust','名刺・お客様'],['sales','今日の売上']].map(([k,l])=>`<a href="#/entry/${k}" class="${tab===k?'on':''}" role="tab" aria-selected="${tab===k}">${l}</a>`).join('')}</div>`;
+  const head=header('記録する');
+  if(tab==='talk'){if(arg==='new'){presetCust=arg2||null;arg=null;}const t=arg?S.talks.find(x=>x.id===arg):null;
+    return head+seg+talkForm(t)+`<p class="note" style="text-align:center" id="talk-count">今日は${S.talks.filter(x=>x.date===today()).length}組記録済みです。分析は「お客さん」の「会話の分析」で見られます。</p>`;}
+  if(tab==='cust'){const c=arg?S.custs.find(x=>x.id===arg):null;return head+seg+custForm(c)+(c?`<a class="btn ghost block" href="#/cust/${c.id}">この方のページを開く</a>`:'')+`<p class="note" style="text-align:center">名刺を受け取ったら、その場で名前と見た目の特徴だけ入れておくと忘れません。</p>`;}
+  const date=arg||today(),e=S.days[date]||{},d=toDate(date),ex=!!S.days[date];
+  return head+seg+`<div class="panel" data-form="day"><h3>${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）の売上<small>入力すると自動で保存</small></h3>
+    <div class="field"><label for="f-date">日付</label><input type="date" id="f-date" value="${date}" data-nosave></div>
+    <div class="grid2"><div class="field"><label for="f-sales">売上（税込）</label><input type="number" inputmode="numeric" id="f-sales" value="${e.sales??''}" placeholder="185000"></div><div class="field"><label for="f-guests">客数</label><input type="number" inputmode="numeric" id="f-guests" value="${e.guests??''}" placeholder="42"></div></div>
+    <div class="field"><label for="f-memo">メモ<span class="hint">イベント、団体予約、試したこと</span></label><textarea id="f-memo" placeholder="例：県人会の団体10名">${esc(e.memo||'')}</textarea></div>
+    <details ${e.groups!=null||e.newGuests!=null||e.weather?'open':''}><summary class="flabel" style="cursor:pointer;margin-bottom:10px">くわしく記録する（任意）</summary>
+      <div class="grid2"><div class="field"><label for="f-groups">組数</label><input type="number" inputmode="numeric" id="f-groups" value="${e.groups??''}"></div><div class="field"><label for="f-new">新規客数</label><input type="number" inputmode="numeric" id="f-new" value="${e.newGuests??''}"></div></div>
+      <div class="field"><span class="flabel">天気</span><div class="chips">${['晴','曇','雨','雪'].map((w,i)=>`<input type="checkbox" data-q="weather" data-multi="0" id="fw${i}" value="${w}" ${e.weather===w?'checked':''}><label for="fw${i}">${w}</label>`).join('')}</div></div></details>
+    <p class="note" id="day-st">${ex?'記録済みです。直すと自動で上書きされます。':'売上を入れた時点で自動で保存されます。'}</p>
+    ${ex?`<button class="btn danger block" style="margin-top:10px" data-act="delDay">この日の記録を削除</button>`:''}</div>
+  <p class="note" style="text-align:center">続けるコツは、売上・客数・メモの3つだけを毎日入れることです。</p>`;}
+
+/* ============ 設定 ============ */
+function vSettings(){const s=S.settings,bytes=(()=>{try{return (localStorage.getItem(LKEY)||'').length*2;}catch(e){return 0;}})();
+  return `<a class="back" href="#/home">‹ ホーム</a>${demoBar()}<div class="phead"><h1>設定</h1></div>
+  <a class="reportrow" href="#/help"><span><b>使い方とよくある質問</b><small>記録がゼロになった、名前を忘れた、など</small></span><span aria-hidden="true">›</span></a>
+  <div class="panel" data-form="set"><h3>お店の情報<small>入力すると自動で保存</small></h3>
+    <div class="field"><label for="s-name">店名</label><input id="s-name" value="${esc(s.name)}" placeholder="例：みやこんじょ"></div>
+    <div class="grid2"><div class="field"><label for="s-seats">席数</label><input id="s-seats" type="number" inputmode="numeric" value="${s.seats??''}"></div><div class="field"><label for="s-biz">月の営業日数</label><input id="s-biz" type="number" inputmode="numeric" value="${s.bizDays??''}"></div></div>
+    <div class="grid2"><div class="field"><label for="s-target">月の売上目標（円）</label><input id="s-target" type="number" inputmode="numeric" value="${s.target??''}"></div><div class="field"><label for="s-ticket">目標客単価（円）</label><input id="s-ticket" type="number" inputmode="numeric" value="${s.ticket??''}" placeholder="任意"></div></div>
+    <div class="field"><label for="s-advisor">週間報告を送る相手</label><input id="s-advisor" value="${esc(s.advisor||'周平さん')}"></div></div>
+  <div class="panel"><h3>データの保存先</h3><p class="note" style="margin-top:0"><b style="color:var(--ink)">記録は、開いているアプリ（ブラウザ）ごとに別々に保存されます。</b>LINEの中、Safari、Chromeで開くと、それぞれ別の記録になります。いつも同じ場所から開けるよう、SafariやChromeで開いてホーム画面に追加し、そのアイコンから開いてください。<br><br>記録はすべてこの端末の中だけに自動で保存されます。インターネットにはどこにも送られません。お客様の名刺写真もこの端末の中です。<br>
+    いまの使用量：約${Math.round(bytes/1024)}KB（写真を除く）。スマホのブラウザの履歴やWebサイトデータを消すと、記録も消えます。</p></div>
+  <div class="panel"><h3>バックアップと引っ越し</h3><div class="btns"><button class="btn" data-act="backup">バックアップを保存</button><button class="btn ghost" data-act="import">バックアップ・CSVを取り込む</button></div>
+    <div class="btns" style="margin-top:8px"><button class="btn ghost small" data-act="csv">売上をCSVで保存</button><button class="btn ghost small" data-act="csvTalk">会話メモをCSVで保存</button><button class="btn ghost small" data-act="csvCust">お客様台帳をCSVで保存</button></div>
+    <p class="note">最後のバックアップ：${pref.lastBackup?new Date(pref.lastBackup).toLocaleString('ja-JP'):'まだありません'}<br>バックアップには名刺写真も含まれます。別の端末に移すときは、このファイルを新しい端末で取り込みます。週に1回の保存がおすすめです。<br>
+    売上CSVの列：日付, 売上, 客数, 組数, 新規客数, 天気, メモ（1行目は見出し）。POSから書き出したCSVも、見出しに「日付」「売上」があれば取り込めます。</p></div>
+  <div class="panel"><h3>データの削除</h3><button class="btn danger block" data-act="clearAll">すべてのデータを削除</button><p class="note">売上、会話メモ、お客様台帳、名刺写真、施策をこの端末から消します。元に戻せないので、先にバックアップを保存してください。</p></div>
+  <div class="panel"><h3>お試し</h3><button class="btn ghost block" data-act="demo">${mode==='demo'?'デモを終える':'デモデータで試す'}</button><p class="note">デモは架空の数字とお客様で全機能を表示します。デモ中の操作は保存されず、終えると元のデータに戻ります。</p></div>`;}
+
+/* ============ グラフ ============ */
+function chartDaily(es){const W=640,H=230,L=44,R2=8,T2=12,B=28,n=es.length;const ma=es.map((_,i)=>{const s=es.slice(Math.max(0,i-6),i+1);return s.length<3?null:sum(s,e=>e.sales)/s.length;});
+  const max=Math.max(...es.map(e=>e.sales||0),...ma.filter(v=>v!=null),1)*1.1,pw=(W-L-R2)/n,bw=Math.max(2,pw*.68),y=v=>T2+(H-T2-B)*(1-v/max);let g='';
+  for(let i=0;i<=4;i++){const v=max*i/4,yy=y(v);g+=`<line x1="${L}" x2="${W-R2}" y1="${yy}" y2="${yy}" stroke="var(--line)"/><text x="${L-6}" y="${yy+4}" text-anchor="end">${v>=1e4?Math.round(v/1e4)+'万':Math.round(v)}</text>`;}
+  es.forEach((e,i)=>{const x=L+pw*i+(pw-bw)/2,d=toDate(e.date),w=d.getDay(),top=y(e.sales||0);g+=`<rect x="${x}" y="${top}" width="${bw}" height="${H-B-top}" rx="2" fill="${w===5||w===6?'var(--sea)':'var(--sea-soft)'}"><title>${e.date}（${WD[w]}） ${yen(e.sales)}</title></rect>`;if(n<=16||i%Math.ceil(n/12)===0)g+=`<text x="${L+pw*i+pw/2}" y="${H-9}" text-anchor="middle">${d.getDate()}</text>`;});
+  const pts=ma.map((v,i)=>v==null?null:`${(L+pw*i+pw/2).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean);if(pts.length>1)g+=`<polyline points="${pts.join(' ')}" fill="none" stroke="var(--sun-line)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="日別の売上グラフ">${g}</svg><div class="legend"><span><i style="background:var(--sea-soft)"></i>日〜木</span><span><i style="background:var(--sea)"></i>金・土</span><span><i style="background:var(--sun-line)"></i>直近7営業日の平均</span></div>`;}
+function chartBars(labels,vals,fmt){const W=640,H=200,L=10,R2=10,T2=24,B=26,n=labels.length,mv=Math.max(...vals.map(v=>v||0)),max=Math.max(mv,1)*1.15,pw=(W-L-R2)/n,bw=Math.min(pw*.6,64);let g='';
+  labels.forEach((lb,i)=>{const v=vals[i]||0,h=(H-T2-B)*v/max,x=L+pw*i+(pw-bw)/2;g+=`<rect x="${x}" y="${H-B-h}" width="${bw}" height="${h}" rx="5" fill="${v===mv&&v?'var(--sea)':'var(--sea-soft)'}"/>`;if(vals[i]!=null)g+=`<text x="${x+bw/2}" y="${H-B-h-7}" text-anchor="middle">${fmt(vals[i])}</text>`;g+=`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle" style="font-size:12px">${lb}</text>`;});
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="棒グラフ">${g}</svg>`;}
+
+/* ============ 描画後 ============ */
+async function after(){
+  if(R[0]==='p'&&R[2]==='todo'&&R[3]){const el=document.getElementById('todo-'+R[3]);if(el){el.querySelector('details').open=true;el.classList.add('flash');setTimeout(()=>el.scrollIntoView({block:'center',behavior:'smooth'}),60);}}
+  if(R[0]==='p'&&R[1]==='p3'&&R[2]==='sheet')updatePreview();
+  if(R[0]==='cust'&&!R[1]||R[1]==='f')filterCustList();
+  for(const el of document.querySelectorAll('[data-photo]')){const src=await idb.get(el.dataset.photo);if(src&&el.isConnected)el.innerHTML=`<img alt="" src="${src}">`;}
+  for(const el of document.querySelectorAll('[data-photo-full]')){const src=await idb.get(el.dataset.photoFull);if(src&&el.isConnected)el.src=src;}}
+function filterCustList(){const list=$('#clist');if(!list)return;const terms=custQuery.toLowerCase().split(/[\s　]+/).filter(Boolean);let shown=0;
+  list.querySelectorAll('.crow').forEach(r=>{const ok=terms.every(t=>r.dataset.text.includes(t));r.hidden=!ok;if(ok)shown++;});const none=$('#c-none');if(none)none.hidden=shown>0||!terms.length;}
+function updatePreview(){const el=$('#b-prev');if(!el)return;const w=[val('b-who'),val('b-what'),val('b-how')].map(s=>s.trim());el.innerHTML=w.some(Boolean)?esc(buildLine(w)):'<span class="muted">ここに一言が表示されます</span>';}
+function buildLine(w){let[a,b,c]=w;if(a&&!/[がはの、]$/.test(a))a+='が';if(b&&c)b=b.replace(/[、。]$/,'')+'、';return [a,b,c].filter(Boolean).join('');}
+const val=id=>{const e=document.getElementById(id);return e?e.value:'';};
+function picked(key,scope){const v=[...(scope||document).querySelectorAll(`input[data-q="${key}"]:checked`)].map(i=>i.value);return Q[key]&&Q[key].multi?v:(v[0]||'');}
+const setSt=(id,msg)=>{const el=document.getElementById(id);if(el)el.textContent=msg;};
+
+/* ============ 自動保存 ============ */
+const SAVERS={
+  talk(){const form=$('#talkform');if(!form)return;const t={};Object.keys(Q).filter(k=>k!=='ctag').forEach(k=>{t[k]=picked(k,form);});t.note=val('t-note').trim();t.date=val('t-date')||today();t.custId=val('t-cust')||'';
+    const any=Object.keys(t).some(k=>!['date','custId'].includes(k)&&(Array.isArray(t[k])?t[k].length:t[k]))||t.custId;let id=form.dataset.id;
+    if(!id){if(!any)return;id=uid();form.dataset.id=id;R=['entry','talk',id];t.at=Date.now();}
+    else{const old=S.talks.find(x=>x.id===id);t.at=old?old.at:Date.now();if(!any){remove('talks',id);form.dataset.id='';R=['entry','talk'];setSt('talk-st','空になったので削除しました');return;}}
+    t.id=id;upsert('talks',t);setSt('talk-st','自動で保存しました');setSt('talk-count',`今日は${S.talks.filter(x=>x.date===today()).length}組記録済みです。分析は「お客さん」の「会話の分析」で見られます。`);},
+  day(){const date=val('f-date'),sales=nn(val('f-sales')),guests=nn(val('f-guests'));if(!date)return;
+    if(sales==null){setSt('day-st',S.days[date]?'売上が空欄のため、前の値のまま保存されています。':'売上を入れた時点で自動で保存されます。');return;}
+    const ng=nn(val('f-new'));if(ng!=null&&guests!=null&&ng>guests){setSt('day-st','新規客数が客数より多くなっています。数字を確認してください。');return;}
+    const w=[...document.querySelectorAll('input[data-q="weather"]:checked')].map(i=>i.value)[0]||'';
+    putDay(date,{sales,guests,groups:nn(val('f-groups')),newGuests:ng,weather:w,memo:val('f-memo').trim()});setSt('day-st',guests?`自動で保存しました。客単価 ${yen(sales/guests)}`:'自動で保存しました。');},
+  cust(){const form=$('#custform');if(!form)return;const name=val('c-name').trim();let id=form.dataset.id;
+    if(!name){setSt('cust-st',id?'お名前が空欄のため、前の名前のまま保存されています。':'お名前を入れた時点で自動で保存されます。');return;}
+    const old=id?S.custs.find(x=>x.id===id)||{}:{};
+    if(!id){id=uid();form.dataset.id=id;if(R[0]==='entry')R=['entry','cust',id];else R=['cust',id];const pb=form.querySelector('[data-act="photo"]');if(pb)pb.disabled=false;}
+    upsert('custs',Object.assign({},old,{id,name,kana:val('c-kana').trim(),company:val('c-company').trim(),title:val('c-title').trim(),feature:val('c-feature').trim(),ctag:picked('ctag',form),seg:picked('seg',form),from:picked('from',form),
+      likes:picked('likes',form),dislikes:val('c-dislikes').trim(),bmonth:val('c-bmonth'),metAt:val('c-met'),referrer:val('c-ref').trim(),memo:val('c-memo').trim(),visits:old.visits||[],hasPhoto:!!old.hasPhoto,created:old.created||Date.now()}));
+    setSt('cust-st','自動で保存しました。');},
+  fl(){const m=flMonth;putMonth(m,Object.assign({},S.months[m],{sales:nn(val('fl-sales')),food:nn(val('fl-food')),labor:nn(val('fl-labor'))}));},
+  line(){const m=val('km')||kpiMonth;putMonth(m,Object.assign({},S.months[m],{line:nn(val('k-line'))}));},
+  set(){S.settings={name:val('s-name').trim(),seats:nn(val('s-seats')),bizDays:nn(val('s-biz'))||26,target:nn(val('s-target')),ticket:nn(val('s-ticket')),advisor:val('s-advisor').trim()||'周平さん'};saveAll();},
+  exp(){const form=$('#expform');if(!form)return;const name=val('x-name').trim();let id=form.dataset.id;
+    if(!name){setSt('exp-st',id?'施策名が空欄のため、前の名前のまま保存されています。':'施策名を入れると自動で保存されます。');return;}
+    const s=val('x-start'),e=val('x-end');if(s&&e&&e<s){setSt('exp-st','終了日が開始日より前になっています。');return;}
+    if(!id){id=uid();form.dataset.id=id;R=['exp',id];}
+    upsert('exps',{id,name,hypo:val('x-hypo').trim(),start:s,end:e,pillar:val('x-pillar'),metric:val('x-metric'),goal:nn(val('x-goal')),cost:nn(val('x-cost')),manual:nn(val('x-manual')),review:val('x-review').trim()});setSt('exp-st','自動で保存しました。');},
+};
+const timers={};
+function queueSave(form){clearTimeout(timers[form]);timers[form]=setTimeout(()=>{delete timers[form];try{SAVERS[form]();}catch(e){console.error(e);}},350);}
+function flushForms(){Object.keys(timers).forEach(f=>{clearTimeout(timers[f]);delete timers[f];try{SAVERS[f]();}catch(e){}});}
+window.addEventListener('pagehide',flushForms);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushForms();});
+function onEdit(e){const el=e.target;if(!el.closest)return;
+  if(el.dataset&&el.dataset.q&&el.dataset.multi==='0'&&el.checked&&e.type==='change'){el.closest('.chips').querySelectorAll(`input[data-q="${el.dataset.q}"]`).forEach(i=>{if(i!==el)i.checked=false;});}
+  if(el.dataset&&el.dataset.q==='seg'&&e.type==='change'){const p=el.id.startsWith('c-')?'c-':'t-',qb=document.getElementById(p+'qb-from');if(qb){const v=picked('seg',el.closest('[data-form]'));qb.hidden=!['宮崎出身','宮崎にゆかり'].includes(v);if(qb.hidden)qb.querySelectorAll('input').forEach(i=>i.checked=false);}}
+  if(el.hasAttribute&&el.hasAttribute('data-nosave'))return;const f=el.closest('[data-form]');if(f)queueSave(f.dataset.form);}
+document.addEventListener('change',onEdit);document.addEventListener('input',e=>{if(e.target.type!=='checkbox')onEdit(e);});
+document.addEventListener('change',ev=>{const el=ev.target;
+  if(el.id==='mp'){viewMonth=el.value||viewMonth;render();}if(el.id==='fm'){flushForms();flMonth=el.value||flMonth;render();}if(el.id==='dm'){dataMonth=el.value||dataMonth;render();}
+  if(el.id==='km'){flushForms();kpiMonth=el.value||kpiMonth;render();}if(el.id==='wr'){weekRange=+el.value;render();}if(el.id==='ar'){anaRange=+el.value;render();}
+  if(el.id==='f-date'&&el.value){flushForms();go('entry/sales/'+el.value);}});
+let ansT;
+document.addEventListener('input',ev=>{const el=ev.target;
+  if(el.dataset&&el.dataset.answer){S.value.answers=Object.assign({},S.value.answers,{[el.dataset.answer]:el.value});clearTimeout(ansT);ansT=setTimeout(saveAll,500);}
+  if(el.dataset&&'build' in el.dataset)updatePreview();
+  if(el.id==='c-q'){custQuery=el.value;filterCustList();}
+  if(el.id==='r-note'){pref.reportNote=el.value;savePref();const rt=$('#r-text');if(rt)rt.value=buildReport(el.value);}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Enter'){const el=ev.target.closest&&ev.target.closest('tr[data-act="editDay"]');if(el)go('entry/sales/'+el.dataset.date);}});
+
+/* ============ ボタン ============ */
+document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-act]');if(!el||el.closest('#modal-root'))return;const act=el.dataset.act;
+  const A={
+    toggle(){const id=el.dataset.id,t=TM[id];if(isAuto(t))return;S.todo=Object.assign({},S.todo,{[id]:!S.todo[id]});saveAll();
+      const box=document.getElementById('todo-'+id),d=isDone(t);box.classList.toggle('done',d);el.setAttribute('aria-pressed',d);
+      const g=pillarProg(t.p),bi=$('#pbar-i'),bt=$('#pbar-t');if(bi)bi.style.width=g.done/g.all*100+'%';if(bt)bt.textContent=`推奨案 ${g.done}/${g.all}`;toast(d?'完了にしました':'未完了に戻しました');},
+    nextTalk(){flushForms();const had=$('#talkform').dataset.id;toast(had?'記録しました。次のお客さんをどうぞ':'新しいメモを開きました');go('entry/talk');},
+    async delTalk(){if(!await ask('この会話メモを削除します。よろしいですか？','削除する',true))return;remove('talks',el.dataset.id);toast('削除しました');go('p/p2/talk');},
+    async delDay(){const date=val('f-date');if(!await ask(`${date}の売上の記録を削除します。よろしいですか？`,'削除する',true))return;delDay(date);toast('削除しました');render();},
+    editDay(){go('entry/sales/'+el.dataset.date);},
+    addCand(){const w=[val('b-who'),val('b-what'),val('b-how')].map(s=>s.trim());if(!w.some(Boolean))return toast('「誰が」「何をできる」「どんな店」を入れてください');S.value=Object.assign({},S.value,{cands:[...S.value.cands,buildLine(w)]});saveAll();toast('候補に追加しました');render();},
+    adopt(){S.value=Object.assign({},S.value,{adopted:S.value.cands[+el.dataset.i]});saveAll();toast('採用しました');render();},
+    delCand(){const c=S.value.cands.slice(),r=c.splice(+el.dataset.i,1)[0];S.value=Object.assign({},S.value,{cands:c,adopted:r===S.value.adopted?null:S.value.adopted});saveAll();render();},
+    copy(){const i=+el.dataset.i,t=TPL[i][1],fb=()=>{const pre=document.getElementById('tpl-'+i),r=document.createRange();r.selectNodeContents(pre);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('文章を選択しました。コピーしてください');};
+      try{navigator.clipboard.writeText(t).then(()=>toast('コピーしました'),fb);}catch(e){fb();}},
+    visit(){flushForms();const c=S.custs.find(x=>x.id===el.dataset.id);if(!c)return;const v=new Set(c.visits||[]);if(v.has(today())){v.delete(today());toast('今日の来店を取り消しました');}else{v.add(today());toast('今日の来店を記録しました');}
+      upsert('custs',Object.assign({},c,{visits:[...v].sort()}));render();},
+    unvisit(){const c=S.custs.find(x=>x.id===el.dataset.id);if(!c)return;upsert('custs',Object.assign({},c,{visits:(c.visits||[]).filter(d=>d!==el.dataset.date)}));render();},
+    photo(){flushForms();const id=$('#custform')&&$('#custform').dataset.id;if(!id)return toast('先にお名前を入れてください');photoTarget=id;$('#photo').click();},
+    async delPhoto(){if(!await ask('この写真を削除します。よろしいですか？','削除する',true))return;await idb.del(el.dataset.id);const c=S.custs.find(x=>x.id===el.dataset.id);if(c)upsert('custs',Object.assign({},c,{hasPhoto:false}));toast('写真を削除しました');render();},
+    async delCust(){const c=S.custs.find(x=>x.id===el.dataset.id);if(!await ask(`${esc(c?c.name:'')}さんを台帳から削除します。名刺写真も消えます。会話メモは残ります。`,'削除する',true))return;
+      remove('custs',el.dataset.id);await idb.del(el.dataset.id);S.talks.forEach(t=>{if(t.custId===el.dataset.id)t.custId='';});saveAll();toast('削除しました');go('cust');},
+    async delExp(){if(!await ask('この施策を削除します。よろしいですか？','削除する',true))return;remove('exps',el.dataset.id);toast('削除しました');go('p/p6/list');},
+    async backup(){flushForms();const photos=mode==='demo'?{}:await idb.all();download(`売上アップノート_バックアップ_${today()}.json`,JSON.stringify({app:'growth-note',version:2,savedAt:new Date().toISOString(),data:S,photos}),'application/json');
+      if(mode!=='demo'){pref.lastBackup=Date.now();savePref();}toast('バックアップを保存しました');render();},
+    csv(){const rows=[['日付','曜日','売上','客数','組数','新規客数','天気','メモ','客単価']];entries().forEach(e=>rows.push([e.date,WD[toDate(e.date).getDay()],e.sales,e.guests,e.groups,e.newGuests,e.weather,e.memo,e.guests?Math.round(e.sales/e.guests):'']));csvOut(`売上データ_${today()}.csv`,rows);},
+    csvTalk(){const keys=Object.keys(Q).filter(k=>k!=='ctag'),rows=[['日付','お客様',...keys.map(k=>Q[k].l),'一言']];S.talks.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(t=>{const c=S.custs.find(x=>x.id===t.custId);rows.push([t.date,c?c.name:'',...keys.map(k=>[].concat(t[k]||[]).join('・')),t.note]);});csvOut(`会話メモ_${today()}.csv`,rows);},
+    csvCust(){const rows=[['お名前','ふりがな','会社','役職','特徴','種類','宮崎とのご縁','宮崎のどちら','好きなもの','苦手なもの','誕生月','初対面の日','紹介者','来店回数','最後に会った日','メモ']];
+      S.custs.forEach(c=>rows.push([c.name,c.kana,c.company,c.title,c.feature,(c.ctag||[]).join('・'),c.seg,c.from,(c.likes||[]).join('・'),c.dislikes,c.bmonth?c.bmonth+'月':'',c.metAt,c.referrer,custVisits(c).length,lastSeen(c)||'',c.memo]));csvOut(`お客様台帳_${today()}.csv`,rows);},
+    import(){$('#file').click();},
+    onbHome(){pref.onbHome=true;savePref();toast('次からはホーム画面のアイコンから開いてください');render();},
+    onbClose(){pref.onboardDone=true;savePref();render();},
+    async shareReport(){const t=val('r-text'),line='https://line.me/R/share?text='+encodeURIComponent(t);pref.lastReport=Date.now();savePref();
+      if(navigator.share){try{await navigator.share({text:t});return;}catch(e){if(e&&e.name==='AbortError')return;}}location.href=line;},
+    copyReport(){const t=val('r-text'),fb=()=>{const ta=$('#r-text');ta.focus();ta.select();toast('文章を選択しました。コピーしてください');};
+      try{navigator.clipboard.writeText(t).then(()=>{pref.lastReport=Date.now();savePref();toast('コピーしました。LINEに貼り付けて送ってください');},fb);}catch(e){fb();}},
+    async clearAll(){if(mode==='demo')return toast('デモを終えてから削除してください');if(!await ask('この端末の記録をすべて削除します。元に戻せません。先にバックアップを保存しましたか？','すべて削除する',true))return;
+      const keys=Object.keys(await idb.all());for(const k of keys)await idb.del(k);S=blank();saveAll();toast('すべてのデータを削除しました');go('home');},
+    demo(){if(mode==='demo')return exitDemo();startDemo();},
+    exitDemo(){exitDemo();},
+  };
+  if(A[act]){ev.preventDefault();try{await A[act]();}catch(err){console.error(err);toast('うまく処理できませんでした：'+(err&&err.message||''));}}});
+function download(name,text,type){const b=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+const csvCell=v=>{v=v==null?'':String(v);return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+const csvOut=(name,rows)=>{download(name,'﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv');toast('保存しました');};
+
+/* ---- 名刺写真 ---- */
+let photoTarget=null;
+$('#photo').addEventListener('change',async ev=>{const f=ev.target.files[0];ev.target.value='';if(!f||!photoTarget)return;
+  if(mode==='demo'){toast('デモ中は写真を保存できません');return;}
+  try{const data=await compressImage(f);const ok=await idb.put(photoTarget,data);if(!ok)throw new Error('この端末では写真を保存できませんでした');
+    const c=S.custs.find(x=>x.id===photoTarget);if(c)upsert('custs',Object.assign({},c,{hasPhoto:true}));toast('写真を保存しました');go('cust/'+photoTarget);}
+  catch(e){toast(e.message);}});
+
+/* ---- 取り込み ---- */
+$('#file').addEventListener('change',ev=>{const f=ev.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=async()=>{try{if(mode==='demo'){toast('デモを終えてから取り込んでください');return;}const text=String(rd.result).replace(/^﻿/,'');
+    if(text.trim().startsWith('{')){const o=JSON.parse(text),D=o.data||o;if(!D.days&&!D.talks&&!D.hearings&&!D.custs)throw new Error('このアプリのバックアップではありません');
+      const talks=(D.talks||[]).concat((D.hearings||[]).map(h=>({id:h.id||uid(),date:h.date,seg:{'宮崎好き・旅行経験':'宮崎好き・旅行','近隣の一般客':'ゆかりなし','その他':''}[h.seg]??h.seg,ch:h.ch,vis:h.vis,note:h.why||'',at:Date.now()})));
+      if(!await ask(`売上${Object.keys(D.days||{}).length}日分、会話メモ${talks.length}組、お客様${(D.custs||[]).length}人、施策${(D.exps||[]).length}件を取り込みます。同じ記録は上書きされます。`,'取り込む'))return;
+      Object.assign(S.days,D.days||{});Object.assign(S.months,D.months||{});
+      const merge=(k,arr)=>{const m=new Map(S[k].map(x=>[x.id,x]));arr.forEach(x=>m.set(x.id,x));S[k]=[...m.values()];};merge('talks',talks);merge('exps',D.exps||[]);merge('custs',D.custs||[]);
+      if(D.settings)S.settings=Object.assign(defSettings(),S.settings,Object.fromEntries(Object.entries(D.settings).filter(([k,v])=>v!=null&&v!=='')));
+      if(D.todo)S.todo=Object.assign({},D.todo,S.todo);
+      if(D.value)S.value={answers:Object.assign({},D.value.answers,S.value.answers),cands:[...new Set([...S.value.cands,...(D.value.cands||[])])],adopted:S.value.adopted||D.value.adopted||null};
+      for(const [k,v] of Object.entries(o.photos||{}))await idb.put(k,v);saveAll();toast('取り込みました');render();return;}
+    const rows=parseCSV(text);if(rows.length<2)throw new Error('データの行がありません');const head=rows[0].map(h=>h.trim()),ix=k=>head.findIndex(h=>h.includes(k));
+    const c={date:ix('日付'),sales:ix('売上'),guests:ix('客数'),groups:ix('組数'),newGuests:ix('新規'),weather:ix('天気'),memo:ix('メモ')};if(c.date<0||c.sales<0)throw new Error('1行目に「日付」と「売上」の見出しが必要です');
+    const add={};rows.slice(1).forEach(r=>{const d=normDate(r[c.date]),s=nn(r[c.sales]);if(!d||s==null)return;const g=k=>c[k]>=0?r[c[k]]:'';add[d]={sales:s,guests:nn(g('guests')),groups:nn(g('groups')),newGuests:nn(g('newGuests')),weather:(g('weather')||'').trim(),memo:(g('memo')||'').trim()};});
+    const n=Object.keys(add).length;if(!n)throw new Error('読み取れる行がありませんでした。日付と売上の形式を確認してください');if(!await ask(`${n}日分の売上を取り込みます。同じ日付は上書きされます。`,'取り込む'))return;
+    Object.assign(S.days,add);saveAll();toast(`${n}日分を取り込みました`);render();}catch(err){toast('取り込めませんでした：'+err.message);}finally{ev.target.value='';}};rd.readAsText(f);});
+function normDate(s){if(!s)return null;const m=String(s).trim().match(/^(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})/);return m?m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]):null;}
+function parseCSV(t){const rows=[];let row=[],cur='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}else if(c==='"')q=true;else if(c===','||c==='\t'){row.push(cur);cur='';}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cur);if(row.some(x=>x!==''))rows.push(row);row=[];cur='';}else cur+=c;}row.push(cur);if(row.some(x=>x!==''))rows.push(row);return rows;}
+
+/* ---- デモ ---- */
+function startDemo(){flushForms();REAL=S;mode='demo';S=blank();const t=new Date();
+  const base={1:120000,2:110000,3:135000,4:150000,5:235000,6:255000},wx=['晴','晴','晴','曇','曇','雨'];
+  for(let i=100;i>=1;i--){const d=new Date(t);d.setDate(d.getDate()-i);const w=d.getDay();if(!base[w])continue;const weather=wx[Math.floor(Math.random()*wx.length)],f=(.82+Math.random()*.36)*(weather==='雨'?.85:1)*(1+(100-i)/700);
+    const guests=Math.round(base[w]/4700*f*(.9+Math.random()*.2)),sales=Math.round(base[w]*f/100)*100;S.days[iso(d)]={sales,guests,groups:Math.round(guests/2.6),newGuests:Math.round(guests*(.15+Math.random()*.2)),weather,memo:i%19===0?'県人会の団体予約':''};}
+  const W=(o,ws)=>{const tot=ws.reduce((a,b)=>a+b,0);let r=Math.random()*tot;for(let i=0;i<o.length;i++){if((r-=ws[i])<0)return o[i];}return o[0];},pickN=(o,k)=>o.slice().sort(()=>Math.random()-.5).slice(0,k);
+  const dago=n=>{const d=new Date(t);d.setDate(d.getDate()-n);return iso(d);};
+  S.custs=[
+    {id:'d1',name:'日高 健一（デモ）',kana:'ひだか けんいち',company:'丸東商事',title:'営業部長',feature:'丸眼鏡、声が大きい、いつもカウンター右端',ctag:['常連','幹事をよくする'],seg:'宮崎出身',from:'都城',likes:['地鶏炭火焼','焼酎'],bmonth:String(t.getMonth()+1),metAt:dago(200),visits:[dago(70),dago(85),dago(110),dago(140)],memo:'都城泉ヶ丘高校出身。部下を連れてくることが多い'},
+    {id:'d2',name:'甲斐 さおり（デモ）',kana:'かい さおり',company:'ひむかデザイン',title:'代表',feature:'ショートカット、赤いトートバッグ',ctag:['県人会'],seg:'宮崎出身',from:'延岡',likes:['冷汁','チキン南蛮'],metAt:dago(40),visits:[dago(3),dago(20),dago(40)],memo:'県人会の若手の会を取りまとめている'},
+    {id:'d3',name:'佐藤 誠（デモ）',kana:'さとう まこと',company:'近所の印刷会社',title:'',feature:'背が高い、野球の話が好き',ctag:['常連'],seg:'ゆかりなし',likes:['チキン南蛮','刺身'],metAt:dago(300),visits:[dago(65),dago(90),dago(120),dago(150),dago(180)],memo:'ジャイアンツファン。キャンプ地の話で盛り上がる'},
+    {id:'d4',name:'黒木 拓也（デモ）',kana:'くろき たくや',company:'みやざき食品',title:'課長',feature:'髭、名刺入れが木製',ctag:['取引先・業者'],seg:'宮崎にゆかり',from:'日南・串間',likes:['宮崎牛'],metAt:dago(8),visits:[dago(8)],memo:'11月の交流会で名刺交換'},
+    {id:'d5',name:'森 ゆかり（デモ）',kana:'もり ゆかり',company:'',title:'',feature:'着物で来店、日本酒も好き',ctag:['紹介してくれた'],seg:'宮崎好き・旅行',likes:['肉巻きおにぎり','焼酎'],metAt:dago(25),visits:[dago(12),dago(25)],referrer:'甲斐 さおり'}];
+  const words=['宮崎の言葉が聞けて落ち着く','地鶏が地元で食べた味と同じ','店主さんと高校の話で盛り上がった','会社の近くで気軽に寄れる','焼酎の種類が多い','宮崎旅行の思い出の味','また同窓会で使いたい'];
+  for(let i=0;i<26;i++){const seg=W(Q.seg.opts,[5,2,3,4]),miya=seg==='宮崎出身'||seg==='宮崎にゆかり';
+    S.talks.push({id:'dt'+i,at:Date.now()-i,date:dago(Math.floor(Math.random()*40)),custId:i===0?'d2':i===1?'d5':'',seg,from:miya?W(Q.from.opts,[4,3,2,1,1,1,1,1]):'',vis:W(Q.vis.opts,seg==='ゆかりなし'?[6,3,1]:[3,3,4]),ch:W(Q.ch.opts,miya?[1,1,0,5,1,2,0]:[4,2,2,0,3,0,1]),
+      purpose:W(Q.purpose.opts,miya?[2,1,2,1,0,1,3]:[4,2,2,1,1,1,0]),age:W(Q.age.opts,[1,3,3,2,1]),n:W(Q.n.opts,[1,4,2,2,1]),likes:pickN(miya?['地鶏炭火焼','冷汁','焼酎','肉巻きおにぎり']:['チキン南蛮','地鶏炭火焼','刺身','宮崎牛'],1+Math.floor(Math.random()*2)),
+      topics:pickN(miya?['地元・母校','宮崎の近況','食べ物・お酒']:['仕事','旅行','食べ物・お酒'],1),wants:[W(['特になし','提供の速さ','席・予約','新メニュー','量'],[6,2,2,1,1])],sat:W(Q.sat.opts,[5,4,1]),note:i<7?words[i]:''});}
+  const pm=ymOf(new Date(t.getFullYear(),t.getMonth()-1,1)),ppm=ymOf(new Date(t.getFullYear(),t.getMonth()-2,1)),ps=sum(monthEntries(pm),e=>e.sales);S.months[pm]={food:ps*.33,labor:ps*.3,line:64};S.months[ppm]={line:41};
+  S.exps.push({id:'dx1',name:'水曜限定 焼酎飲み比べ',hypo:'弱い水曜に飲み比べセットを出せば、水曜の売上が平均に近づく',start:dago(12),end:dago(6),pillar:'p1',metric:'sales',goal:900000,cost:12000,manual:null,review:''});
+  S.settings=Object.assign(defSettings(),{name:'デモ店舗',seats:30,target:4500000,ticket:5000});toast('デモデータを表示しています');go('home');}
+function exitDemo(){if(mode!=='demo')return;S=REAL||blank();REAL=null;mode='local';toast('デモを終えました');go('home');}
+
+/* ============ 起動 ============ */
+load();
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+const h=(location.hash||'').replace(/^#\/?/,'');if(h)R=h.split('/').filter(Boolean);
+render();
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
