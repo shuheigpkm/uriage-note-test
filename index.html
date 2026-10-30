@@ -293,6 +293,12 @@ nav.bn a.add .ic svg{width:22px;height:22px}
 .modal p{margin:0 0 16px;font-size:15px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 [hidden]{display:none!important}
+.tcards{margin:0 0 16px}
+.tclist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tc{display:flex;flex-direction:column;gap:3px;background:var(--card);border-radius:var(--r-m);padding:10px 12px;box-shadow:var(--shadow);color:var(--ink);text-decoration:none;border-left:4px solid var(--sea-soft);min-width:0}
+.tc.sleep{border-left-color:var(--sun)}.tc.bday{border-left-color:var(--sea)}
+.tc .why{font-size:11px;font-weight:700;color:var(--sub)}.tc b{font-size:15px}
+.tc .bits,.tc .w{font-size:12px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 </style>
 </head>
 <body>
@@ -318,12 +324,21 @@ nav.bn a.add .ic svg{width:22px;height:22px}
 const LKEY='stg_growth-note-v2',PREF='stg_growth-note-pref-v2';
 const WD=['日','月','火','水','木','金','土'];
 const defSettings=()=>({name:'',seats:null,bizDays:26,target:null,ticket:null,advisor:'周平さん'});
-const blank=()=>({settings:defSettings(),days:{},months:{},talks:[],exps:[],custs:[],todo:{},value:{answers:{},cands:[],adopted:null}});
+const SCHEMA=3;
+const blank=()=>({schema:SCHEMA,settings:defSettings(),days:{},months:{},talks:[],exps:[],custs:[],todo:{},value:{answers:{},cands:[],adopted:null}});
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
 let S=blank(),mode='local',REAL=null,storageOK=true;
 const pref=Object.assign({entryTab:'talk',lastBackup:0,lastReport:0,reportNote:'',onboardDone:false,onbHome:false},store.get(PREF,{}));
 const savePref=()=>{try{store.set(PREF,pref);}catch(e){}};
-function load(){const L=store.get(LKEY,null);if(L){S=Object.assign(blank(),L);['talks','exps','custs'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});S.settings=Object.assign(defSettings(),S.settings);}}
+/* 版ごとの移行。古い版のデータを読んだら、新しい形に順番に直す（項目は足すだけで消さない） */
+const MIGRATE={
+  3:D=>D /* v2→v3：形は同じ。版番号だけ付ける */
+};
+function migrate(D){let v=+D.schema||2;while(v<SCHEMA){v++;if(MIGRATE[v])D=MIGRATE[v](D)||D;}D.schema=SCHEMA;return D;}
+function load(){const L=store.get(LKEY,null);if(L){const old=+L.schema||2;
+    if(old<SCHEMA){try{const raw=localStorage.getItem(LKEY);if(raw&&raw.length<1.5e6)localStorage.setItem(LKEY+'-before-v'+SCHEMA,raw);}catch(e){}}
+    S=migrate(Object.assign(blank(),L));['talks','exps','custs'].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});S.settings=Object.assign(defSettings(),S.settings);
+    if(old<SCHEMA)saveAll();}}
 function saveAll(){if(mode==='demo')return;try{store.set(LKEY,S);storageOK=true;markSaved();}
   catch(e){storageOK=false;toast('端末の保存領域がいっぱいです。バックアップを保存して、名刺写真を整理してください');}}
 function markSaved(){const el=document.getElementById('saved');if(!el)return;const d=new Date();el.textContent=`自動保存 ${pad(d.getHours())}:${pad(d.getMinutes())}`;el.classList.add('pulse');setTimeout(()=>el.classList.remove('pulse'),500);}
@@ -498,14 +513,16 @@ function vHome(){
   const running=S.exps.filter(x=>expStatus(x).k==='run').length,waiting=S.exps.filter(x=>expStatus(x).k==='wait').length;
   const weekTalks=S.talks.filter(t=>(daysAgo(t.date)??99)<7).length,sleep=S.custs.filter(isSleeping).length;
   const hasData=Object.keys(S.days).length||S.talks.length||S.custs.length;
-  const needBackup=mode!=='demo'&&hasData&&(Date.now()-(pref.lastBackup||0))>14*864e5;
+  const needBackup=mode!=='demo'&&hasData&&(Date.now()-(pref.lastBackup||0))>7*864e5;
+  const tabWarn=mode!=='demo'&&hasData&&!STANDALONE&&!IN_APP&&IS_IOS;
   const first=nx[0];
   const hero=first?`<section class="hero" aria-labelledby="hero-t"><div class="k">次の一手</div><h2 id="hero-t">${esc(first.t)}</h2><p>${esc(first.why)}</p>
     <div class="row"><span class="from">${PM[first.p].n}. ${PM[first.p].name}</span><a class="go" href="#/p/${first.p}/todo/${first.id}">やり方を見る</a></div></section>`
     :`<section class="hero allset"><div class="k">推奨案</div><h2>主要な推奨案はすべて完了しています</h2><p>施策を回しながら、月次の数字で効果を確かめていきましょう。</p></section>`;
   return header('売上アップ・ノート',S.settings.name||'店名は設定から')+
-  (needBackup?`<div class="banner"><span>${pref.lastBackup?'最後のバックアップから2週間以上たちました。':'まだバックアップがありません。'}端末の故障に備えて保存しておきましょう。</span><button class="btn small" data-act="backup">保存する</button></div>`:'')+
-  onboardCard()+hero+reportRow()+`<div class="snap">
+  (needBackup?`<div class="banner"><span>${pref.lastBackup?'最後のバックアップから1週間以上たちました。':'まだバックアップがありません。'}端末の故障や機種変更に備えて保存しておきましょう。</span><button class="btn small" data-act="backup">保存する</button></div>`:'')+
+  (tabWarn?`<div class="banner warn"><span><b>Safariのタブで開いています。</b>iPhoneはしばらく開かないと、ここの記録が消えることがあります。まずバックアップを保存してください。</span><button class="btn small" data-act="backup">保存する</button></div>`:'')+
+  onboardCard()+todayCards()+hero+reportRow()+`<div class="snap">
     <a class="stat" href="#/p/p1/month"><span>今月の日販</span><b>${st.days?man(st.avgSales):'―'}</b>${st.days?delta(st.avgSales,pv.avgSales):'<em class="muted">記録なし</em>'}</a>
     <a class="stat" href="#/cust/ana"><span>会話メモ</span><b>${S.talks.length}組</b><em class="muted">この7日で${weekTalks}組</em></a>
     <a class="stat" href="#/cust"><span>お客様台帳</span><b>${S.custs.length}人</b><em class="${sleep?'down':'muted'}">${sleep?`しばらく来ていない常連 ${sleep}人`:'名刺・常連さんを登録'}</em></a>
@@ -517,9 +534,29 @@ function vHome(){
 }
 
 
+/* ============ 開店前の話題カード（表示だけ。新しい保存項目は作らない） ============ */
+function todayPicks(){const out=[],seen=new Set(),add=(c,why,cls)=>{if(seen.has(c.id)||out.length>=4)return;seen.add(c.id);out.push({c,why,cls});};
+  const by=a=>a.slice().sort((x,y)=>(daysAgo(lastSeen(x))??999)-(daysAgo(lastSeen(y))??999));
+  by(S.custs.filter(isSleeping)).reverse().slice(0,2).forEach(c=>add(c,`${daysAgo(lastSeen(c))}日来ていない常連`,'sleep'));
+  S.custs.filter(bdayThisMonth).slice(0,2).forEach(c=>add(c,'今月が誕生月','bday'));
+  by(S.custs.filter(c=>(daysAgo(lastSeen(c))??999)<=14)).forEach(c=>{const d=daysAgo(lastSeen(c));add(c,d===0?'今日会った':`${d}日前に来店`,'recent');});
+  return out;}
+function lastWords(c){const t=custTalks(c).filter(t=>(t.note||'').trim()).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];return t?t.note:(c.memo||'');}
+function todayCards(){if(!S.custs.length)return'';const ps=todayPicks();if(!ps.length)return'';
+  if(mode!=='demo'){const d=today(),a=pref.cardDays||[];if(!a.includes(d)){pref.cardDays=[...a,d].slice(-90);savePref();}}
+  return `<section class="tcards" aria-labelledby="tc-h"><h2 class="sec-h" id="tc-h">今日の話題カード<small>開店前にひと目</small></h2>
+  <div class="tclist">${ps.map(({c,why,cls})=>{const w=lastWords(c),bits=[c.feature,c.from&&('出身 '+c.from),(c.likes||[]).slice(0,2).join('・')].filter(Boolean);
+    return `<a class="tc ${cls}" href="#/cust/${c.id}"><span class="why">${esc(why)}</span><b>${esc(c.name||'（名前なし）')}さん</b>
+      ${bits.length?`<span class="bits">${esc(bits.join('／'))}</span>`:''}${w?`<span class="w">前回の話：${esc(String(w).slice(0,40))}</span>`:''}</a>`;}).join('')}</div></section>`;}
+
 /* ============ はじめての3ステップ・週間報告・使い方 ============ */
 const IS_IOS=/iPhone|iPad|iPod/.test(UA);
 const advisor=()=>S.settings.advisor||'周平さん';
+const noticeText=()=>`【お客様の情報の取り扱いについて】
+当店では、より良いおもてなしのために、いただいたお名刺や、お伺いしたお話（お名前・ご出身・お好みなど）を記録しています。
+記録はお店の端末の中だけで管理し、ご本人の同意なく第三者に渡すことはありません。
+記録の確認や削除をご希望の方は、お気軽にスタッフへお申し付けください。
+${S.settings.name||'店名'}`;
 function onboardCard(){if(mode==='demo'||pref.onboardDone)return'';
   const s1=STANDALONE||pref.onbHome,s2=!!S.settings.name,s3=S.custs.length>=1,all=s1&&s2&&s3;
   const row=(done,n,t,d,act)=>`<div class="onb-row ${done?'done':''}"><span class="onb-n">${done?CHECK:n}</span><div><b>${t}</b>${done?'':`<span class="onb-d">${d}</span>${act}`}</div></div>`;
@@ -831,9 +868,13 @@ function vSettings(){const s=S.settings,bytes=(()=>{try{return (localStorage.get
     <div class="field"><label for="s-advisor">週間報告を送る相手</label><input id="s-advisor" value="${esc(s.advisor||'周平さん')}"></div></div>
   <div class="panel"><h3>データの保存先</h3><p class="note" style="margin-top:0"><b style="color:var(--ink)">記録は、開いているアプリ（ブラウザ）ごとに別々に保存されます。</b>LINEの中、Safari、Chromeで開くと、それぞれ別の記録になります。いつも同じ場所から開けるよう、SafariやChromeで開いてホーム画面に追加し、そのアイコンから開いてください。<br><br>記録はすべてこの端末の中だけに自動で保存されます。インターネットにはどこにも送られません。お客様の名刺写真もこの端末の中です。<br>
     いまの使用量：約${Math.round(bytes/1024)}KB（写真を除く）。スマホのブラウザの履歴やWebサイトデータを消すと、記録も消えます。</p></div>
+  <div class="panel"><h3>お客様への掲示文<small>個人情報の利用目的</small></h3>
+    <textarea id="notice-text" rows="8" readonly style="width:100%;font:inherit;font-size:14px;line-height:1.6;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--card);color:var(--ink)">${esc(noticeText())}</textarea>
+    <div class="btns" style="margin-top:8px"><button class="btn small" data-act="copyNotice">文章をコピー</button></div>
+    <p class="note">名刺や会話の記録は個人情報です。お店の規模に関係なく、使う目的を伝えておく必要があります。レジ横やメニューの裏に貼ってください。</p></div>
   <div class="panel"><h3>バックアップと引っ越し</h3><div class="btns"><button class="btn" data-act="backup">バックアップを保存</button><button class="btn ghost" data-act="import">バックアップ・CSVを取り込む</button></div>
     <div class="btns" style="margin-top:8px"><button class="btn ghost small" data-act="csv">売上をCSVで保存</button><button class="btn ghost small" data-act="csvTalk">会話メモをCSVで保存</button><button class="btn ghost small" data-act="csvCust">お客様台帳をCSVで保存</button></div>
-    <p class="note">最後のバックアップ：${pref.lastBackup?new Date(pref.lastBackup).toLocaleString('ja-JP'):'まだありません'}<br>バックアップには名刺写真も含まれます。別の端末に移すときは、このファイルを新しい端末で取り込みます。週に1回の保存がおすすめです。<br>
+    <p class="note">最後のバックアップ：${pref.lastBackup?new Date(pref.lastBackup).toLocaleString('ja-JP'):'まだありません'}<br>${pref.persisted?'この端末は記録を消さずに保存する設定になっています。':'この端末では、ブラウザが空き容量の都合で記録を消すことがあります。こまめにバックアップしてください。'}<br>バックアップには名刺写真も含まれます。別の端末に移すときは、このファイルを新しい端末で取り込みます。週に1回の保存がおすすめです。<br>
     売上CSVの列：日付, 売上, 客数, 組数, 新規客数, 天気, メモ（1行目は見出し）。POSから書き出したCSVも、見出しに「日付」「売上」があれば取り込めます。</p></div>
   <div class="panel"><h3>データの削除</h3><button class="btn danger block" data-act="clearAll">すべてのデータを削除</button><p class="note">売上、会話メモ、お客様台帳、名刺写真、施策をこの端末から消します。元に戻せないので、先にバックアップを保存してください。</p></div>
   <div class="panel"><h3>お試し</h3><button class="btn ghost block" data-act="demo">${mode==='demo'?'デモを終える':'デモデータで試す'}</button><p class="note">デモは架空の数字とお客様で全機能を表示します。デモ中の操作は保存されず、終えると元のデータに戻ります。</p></div>`;}
@@ -937,13 +978,21 @@ document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-a
     async delCust(){const c=S.custs.find(x=>x.id===el.dataset.id);if(!await ask(`${esc(c?c.name:'')}さんを台帳から削除します。名刺写真も消えます。会話メモは残ります。`,'削除する',true))return;
       remove('custs',el.dataset.id);await idb.del(el.dataset.id);S.talks.forEach(t=>{if(t.custId===el.dataset.id)t.custId='';});saveAll();toast('削除しました');go('cust');},
     async delExp(){if(!await ask('この施策を削除します。よろしいですか？','削除する',true))return;remove('exps',el.dataset.id);toast('削除しました');go('p/p6/list');},
-    async backup(){flushForms();const photos=mode==='demo'?{}:await idb.all();download(`売上アップノート_バックアップ_${today()}.json`,JSON.stringify({app:'growth-note',version:2,savedAt:new Date().toISOString(),data:S,photos}),'application/json');
-      if(mode!=='demo'){pref.lastBackup=Date.now();savePref();}toast('バックアップを保存しました');render();},
+    async backup(){flushForms();const photos=mode==='demo'?{}:await idb.all();const name=`売上アップノート_バックアップ_${today()}.json`,
+        text=JSON.stringify({app:'growth-note',version:SCHEMA,savedAt:new Date().toISOString(),data:S,photos});
+      let shared=false;try{const f=new File([text],name,{type:'application/json'});
+        if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'売上アップ・ノートのバックアップ'});shared=true;}}
+      catch(e){if(e&&e.name==='AbortError'){toast('保存を取りやめました');return;}}
+      if(!shared)download(name,text,'application/json');
+      if(mode!=='demo'){pref.lastBackup=Date.now();savePref();try{localStorage.removeItem(LKEY+'-before-v'+SCHEMA);}catch(e){}}
+      toast(shared?'「ファイルに保存」やLINEの自分用トークに保存してください':'バックアップを保存しました');render();},
     csv(){const rows=[['日付','曜日','売上','客数','組数','新規客数','天気','メモ','客単価']];entries().forEach(e=>rows.push([e.date,WD[toDate(e.date).getDay()],e.sales,e.guests,e.groups,e.newGuests,e.weather,e.memo,e.guests?Math.round(e.sales/e.guests):'']));csvOut(`売上データ_${today()}.csv`,rows);},
     csvTalk(){const keys=Object.keys(Q).filter(k=>k!=='ctag'),rows=[['日付','お客様',...keys.map(k=>Q[k].l),'一言']];S.talks.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(t=>{const c=S.custs.find(x=>x.id===t.custId);rows.push([t.date,c?c.name:'',...keys.map(k=>[].concat(t[k]||[]).join('・')),t.note]);});csvOut(`会話メモ_${today()}.csv`,rows);},
     csvCust(){const rows=[['お名前','ふりがな','会社','役職','特徴','種類','宮崎とのご縁','宮崎のどちら','好きなもの','苦手なもの','誕生月','初対面の日','紹介者','来店回数','最後に会った日','メモ']];
       S.custs.forEach(c=>rows.push([c.name,c.kana,c.company,c.title,c.feature,(c.ctag||[]).join('・'),c.seg,c.from,(c.likes||[]).join('・'),c.dislikes,c.bmonth?c.bmonth+'月':'',c.metAt,c.referrer,custVisits(c).length,lastSeen(c)||'',c.memo]));csvOut(`お客様台帳_${today()}.csv`,rows);},
     import(){$('#file').click();},
+    copyNotice(){const t=noticeText(),fb=()=>{const ta=$('#notice-text');ta.focus();ta.select();toast('文章を選択しました。コピーしてください');};
+      try{navigator.clipboard.writeText(t).then(()=>toast('コピーしました'),fb);}catch(e){fb();}},
     onbHome(){pref.onbHome=true;savePref();toast('次からはホーム画面のアイコンから開いてください');render();},
     onbClose(){pref.onboardDone=true;savePref();render();},
     async shareReport(){const t=val('r-text'),line='https://line.me/R/share?text='+encodeURIComponent(t);pref.lastReport=Date.now();savePref();
@@ -975,7 +1024,11 @@ $('#file').addEventListener('change',ev=>{const f=ev.target.files[0];if(!f)retur
       const talks=(D.talks||[]).concat((D.hearings||[]).map(h=>({id:h.id||uid(),date:h.date,seg:{'宮崎好き・旅行経験':'宮崎好き・旅行','近隣の一般客':'ゆかりなし','その他':''}[h.seg]??h.seg,ch:h.ch,vis:h.vis,note:h.why||'',at:Date.now()})));
       if(!await ask(`売上${Object.keys(D.days||{}).length}日分、会話メモ${talks.length}組、お客様${(D.custs||[]).length}人、施策${(D.exps||[]).length}件を取り込みます。同じ記録は上書きされます。`,'取り込む'))return;
       Object.assign(S.days,D.days||{});Object.assign(S.months,D.months||{});
-      const merge=(k,arr)=>{const m=new Map(S[k].map(x=>[x.id,x]));arr.forEach(x=>m.set(x.id,x));S[k]=[...m.values()];};merge('talks',talks);merge('exps',D.exps||[]);merge('custs',D.custs||[]);
+      const merge=(k,arr)=>{if(!Array.isArray(S[k]))S[k]=[];const m=new Map(S[k].map(x=>[x.id,x]));arr.forEach(x=>{if(!x||x.id==null)return;const cur=m.get(x.id);
+        const nx=Object.assign({},cur||{},x);if(cur&&Array.isArray(cur.visits)&&Array.isArray(x.visits))nx.visits=[...new Set([...cur.visits,...x.visits])].sort();m.set(x.id,nx);});S[k]=[...m.values()];};
+      merge('talks',talks);merge('exps',D.exps||[]);merge('custs',D.custs||[]);
+      const KNOWN=['schema','settings','days','months','talks','hearings','exps','custs','todo','value'];
+      Object.keys(D).filter(k=>!KNOWN.includes(k)).forEach(k=>{const v=D[k];if(Array.isArray(v)&&v.every(x=>x&&typeof x==='object'&&x.id!=null))merge(k,v);else if(S[k]===undefined)S[k]=v;});
       if(D.settings)S.settings=Object.assign(defSettings(),S.settings,Object.fromEntries(Object.entries(D.settings).filter(([k,v])=>v!=null&&v!=='')));
       if(D.todo)S.todo=Object.assign({},D.todo,S.todo);
       if(D.value)S.value={answers:Object.assign({},D.value.answers,S.value.answers),cands:[...new Set([...S.value.cands,...(D.value.cands||[])])],adopted:S.value.adopted||D.value.adopted||null};
@@ -1013,7 +1066,7 @@ function exitDemo(){if(mode!=='demo')return;S=REAL||blank();REAL=null;mode='loca
 
 /* ============ 起動 ============ */
 load();
-try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().then(ok=>{pref.persisted=!!ok;savePref();}).catch(()=>{});}catch(e){}
 const h=(location.hash||'').replace(/^#\/?/,'');if(h)R=h.split('/').filter(Boolean);
 render();
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
