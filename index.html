@@ -304,6 +304,11 @@ nav.bn a.add .ic svg{width:22px;height:22px}
 .closerow{border-left:4px solid var(--sun)}
 .chips .chip{font:inherit;padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:14px;cursor:pointer;font-weight:500;line-height:1.3}
 .chips .chip.on{background:var(--sea);border-color:var(--sea);color:var(--on-sea);font-weight:700}
+.reachrow{border-left:4px solid var(--sea)}
+.reach .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}.reach .rh a{color:var(--ink);text-decoration:none;font-size:16px}
+.reach .sb{font-size:13px;color:var(--sub);margin-bottom:8px}
+.reach .draft{width:100%;font:inherit;font-size:14px;line-height:1.6;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--paper);color:var(--ink)}
+.reach.sent{opacity:.45;transition:opacity .4s}
 </style>
 </head>
 <body>
@@ -328,7 +333,7 @@ nav.bn a.add .ic svg{width:22px;height:22px}
 /* ============ 保存（この端末の中だけ） ============ */
 const LKEY='stg_growth-note-v2',PREF='stg_growth-note-pref-v2';
 const WD=['日','月','火','水','木','金','土'];
-const defSettings=()=>({name:'',seats:null,bizDays:26,target:null,ticket:null,advisor:'周平さん'});
+const defSettings=()=>({name:'',seats:null,bizDays:26,target:null,ticket:null,advisor:'周平さん',owner:''});
 const SCHEMA=3;
 const blank=()=>({schema:SCHEMA,settings:defSettings(),days:{},months:{},talks:[],exps:[],custs:[],todo:{},value:{answers:{},cands:[],adopted:null}});
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
@@ -478,12 +483,33 @@ function custVisits(c){return [...new Set([...(c.visits||[]),...custTalks(c).map
 function lastSeen(c){const v=custVisits(c);return v.length?v[v.length-1]:(c.metAt||null);}
 const isRegular=c=>(c.ctag||[]).includes('常連')||custVisits(c).length>=3;
 const isSleeping=c=>isRegular(c)&&(daysAgo(lastSeen(c))??0)>=60;
+/* 来店周期：来店の間隔の中央値（7日未満は7日）。2回以上来た人だけ */
+function custCycle(c){const v=custVisits(c);if(v.length<2)return null;const g=[];for(let i=1;i<v.length;i++)g.push((toDate(v[i])-toDate(v[i-1]))/864e5);
+  g.sort((a,b)=>a-b);const m=g.length%2?g[(g.length-1)/2]:(g[g.length/2-1]+g[g.length/2])/2;return Math.max(7,Math.round(m));}
+const lastContact=c=>{const a=(c.contacts||[]).map(x=>x.date).sort();return a.length?a[a.length-1]:null;};
+function dueInfo(c){const cy=custCycle(c),since=daysAgo(lastSeen(c)),lc=lastContact(c);if(since==null)return null;
+  const quiet=lc&&daysAgo(lc)<Math.max(14,cy||0)&&lc>=lastSeen(c);
+  if(bdayThisMonth(c)&&!(lc&&lc.slice(0,7)===today().slice(0,7)))return {kind:'bday',cy,since,why:'今月が誕生月'};
+  if(quiet)return null;
+  if(cy&&since>=Math.max(14,Math.round(cy*1.2))&&since<=Math.max(120,cy*4))return {kind:'due',cy,since,why:`いつもは約${cy}日ごと、今日で${since}日`};
+  if(isSleeping(c))return {kind:'sleep',cy,since,why:`${since}日来ていない常連`};
+  return null;}
+const dueList=()=>S.custs.map(c=>({c,d:dueInfo(c)})).filter(x=>x.d).sort((a,b)=>({bday:0,due:1,sleep:2}[a.d.kind]-{bday:0,due:1,sleep:2}[b.d.kind])||(b.d.since/(b.d.cy||60))-(a.d.since/(a.d.cy||60)));
+function draftFor(c,d){const nm=(c.name||'').split(/[\s　]/)[0]||c.name,shop=S.settings.name||'お店',me=S.settings.owner?`${shop}の${S.settings.owner}`:shop;
+  const like=(c.likes||[])[0],hook=like?`${like}を用意してお待ちしています。`:'またお顔を見られるのを楽しみにしています。';
+  if(d.kind==='bday')return `${nm}さん、こんにちは。${me}です。\n今月お誕生日ですね、おめでとうございます！\nお近くに来られた際は、ぜひお祝いさせてください。${hook}`;
+  if(d.kind==='sleep')return `${nm}さん、ご無沙汰しています。${me}です。\nお元気にされていますか？\n${hook}`;
+  return `${nm}さん、こんにちは。${me}です。\nその後お変わりありませんか？\n${hook}`;}
+
 const bdayThisMonth=c=>c.bmonth&&+c.bmonth===new Date().getMonth()+1;
 const initial=c=>(c.kana||c.name||'？').trim().charAt(0);
 const custText=c=>[c.name,c.kana,c.company,c.title,c.feature,c.seg,c.from,c.memo,c.referrer,c.dislikes,...(c.likes||[]),...(c.ctag||[])].join(' ').toLowerCase();
-const CF={noname:'名前を入れる',all:'全員',recent:'最近会った',regular:'常連',sleep:'しばらく来ていない',bday:'今月が誕生月',kanji:'幹事・県人会'};
-function custFilter(f,c){if(f==='noname')return !!c.needName;if(f==='recent')return (daysAgo(lastSeen(c))??999)<=30;if(f==='regular')return isRegular(c);if(f==='sleep')return isSleeping(c);if(f==='bday')return bdayThisMonth(c);
+const CF={noname:'名前を入れる',all:'全員',due:'そろそろ',recent:'最近会った',regular:'常連',sleep:'しばらく来ていない',bday:'今月が誕生月',kanji:'幹事・県人会'};
+function custFilter(f,c){if(f==='noname')return !!c.needName;if(f==='due')return !!dueInfo(c);if(f==='recent')return (daysAgo(lastSeen(c))??999)<=30;if(f==='regular')return isRegular(c);if(f==='sleep')return isSleeping(c);if(f==='bday')return bdayThisMonth(c);
   if(f==='kanji')return (c.ctag||[]).some(t=>t==='幹事をよくする'||t==='県人会');return true;}
+
+function reachStats(fromDate){let n=0,hit=0;S.custs.forEach(c=>(c.contacts||[]).forEach(x=>{if(x.date<fromDate)return;n++;const v=custVisits(c);
+    if(v.some(d=>d>x.date&&(toDate(d)-toDate(x.date))/864e5<=14))hit++;}));return {n,hit};}
 
 /* ============ ページ内ルーター ============ */
 let R=['home'];
@@ -499,6 +525,7 @@ function render(){
     else if(R[0]==='help')html=vHelp();
     else if(R[0]==='settings')html=vSettings();
     else if(R[0]==='close')html=vClose();
+    else if(R[0]==='reach')html=vReach();
     else if(R[0]==='exp')html=vExpForm(R[1],R[2]);
     else html=vHome();
   }catch(err){html=`<div class="panel" style="margin-top:16px">表示できませんでした：${esc(err.message)}</div>`;console.error(err);}
@@ -533,7 +560,7 @@ function vHome(){
   (needBackup?`<div class="banner"><span>${pref.lastBackup?'最後のバックアップから1週間以上たちました。':'まだバックアップがありません。'}端末の故障や機種変更に備えて保存しておきましょう。</span><button class="btn small" data-act="backup">保存する</button></div>`:'')+
   (tabWarn?`<div class="banner warn"><span><b>Safariのタブで開いています。</b>iPhoneはしばらく開かないと、ここの記録が消えることがあります。まずバックアップを保存してください。</span><button class="btn small" data-act="backup">保存する</button></div>`:'')+
   (mode!=='demo'&&S.custs.some(c=>c.needName)?`<div class="banner"><span>名刺だけ登録した方が${S.custs.filter(c=>c.needName).length}人います。忘れないうちにお名前を入れておきましょう。</span><a class="btn small" href="#/cust/f/noname">入れる</a></div>`:'')+
-  closeRow()+onboardCard()+todayCards()+hero+reportRow()+`<div class="snap">
+  closeRow()+onboardCard()+todayCards()+reachRow()+hero+reportRow()+`<div class="snap">
     <a class="stat" href="#/p/p1/month"><span>今月の日販</span><b>${st.days?man(st.avgSales):'―'}</b>${st.days?delta(st.avgSales,pv.avgSales):'<em class="muted">記録なし</em>'}</a>
     <a class="stat" href="#/cust/ana"><span>会話メモ</span><b>${S.talks.length}組</b><em class="muted">この7日で${weekTalks}組</em></a>
     <a class="stat" href="#/cust"><span>お客様台帳</span><b>${S.custs.length}人</b><em class="${sleep?'down':'muted'}">${sleep?`しばらく来ていない常連 ${sleep}人`:'名刺・常連さんを登録'}</em></a>
@@ -548,7 +575,7 @@ function vHome(){
 /* ============ 開店前の話題カード（表示だけ。新しい保存項目は作らない） ============ */
 function todayPicks(){const out=[],seen=new Set(),add=(c,why,cls)=>{if(seen.has(c.id)||out.length>=4)return;seen.add(c.id);out.push({c,why,cls});};
   const by=a=>a.slice().sort((x,y)=>(daysAgo(lastSeen(x))??999)-(daysAgo(lastSeen(y))??999));
-  by(S.custs.filter(isSleeping)).reverse().slice(0,2).forEach(c=>add(c,`${daysAgo(lastSeen(c))}日来ていない常連`,'sleep'));
+  dueList().filter(x=>x.d.kind!=='bday').slice(0,2).forEach(({c,d})=>add(c,d.kind==='due'?`いつもより間が空いた（${d.since}日）`:d.why,'sleep'));
   S.custs.filter(bdayThisMonth).slice(0,2).forEach(c=>add(c,'今月が誕生月','bday'));
   by(S.custs.filter(c=>(daysAgo(lastSeen(c))??999)<=14)).forEach(c=>{const d=daysAgo(lastSeen(c));add(c,d===0?'今日会った':`${d}日前に来店`,'recent');});
   return out;}
@@ -576,6 +603,8 @@ function onboardCard(){if(mode==='demo'||pref.onboardDone)return'';
   ${row(s2,2,'店名を入れる','月の目標や席数は、あとからでも大丈夫です。','<a class="btn ghost small" href="#/settings">設定を開く</a>')}
   ${row(s3,3,'常連さんを1人登録してみる','名前と、見た目の特徴を一言。それだけで十分です。','<a class="btn ghost small" href="#/entry/cust">登録する</a>')}
   <div class="onb-foot"><a href="#/help">使い方とよくある質問</a>${all?'<button class="linkbtn" data-act="onbClose">閉じる</button>':''}</div></section>`;}
+function reachRow(){if(mode==='demo'&&!S.custs.length)return'';const n=dueList().length;if(!n)return'';
+  return `<a class="reportrow reachrow" href="#/reach"><span><b>そろそろ声をかけたい人 ${n}人</b><small>いつもの間隔を過ぎた常連さん・誕生月の方。LINE文案つき</small></span><span aria-hidden="true">›</span></a>`;}
 function closeRow(){if(mode==='demo')return'';const h=new Date().getHours(),d=bizDate(),e=S.days[d];if(e&&e.sales!=null)return'';if(h>=5&&h<17)return'';
   return `<a class="reportrow closerow" href="#/close"><span><b>今日の締め（20秒）</b><small>売上・客数・今日のいい話を残す</small></span><span aria-hidden="true">›</span></a>`;}
 function reportRow(){const d=pref.lastReport?Math.floor((Date.now()-pref.lastReport)/864e5):null,due=d==null||d>=7;
@@ -598,6 +627,7 @@ function buildReport(note){
     tk.filter(t=>(t.note||'').trim()).slice(-2).forEach(t=>L.push(`・お客さんの言葉「${t.note}」`));}
   const vc={};S.custs.forEach(c=>Object.entries(c.via||{}).forEach(([d,v])=>{if(d>=a&&d<=b)vc[v]=(vc[v]||0)+1;}));
   const vr=Object.entries(vc).sort((x,y)=>y[1]-x[1]);if(vr.length)L.push(`・来店のきっかけ：${vr.map(([k,v])=>`${k}${v}人`).join('、')}`);
+  const wk=reachStats(a),r8=reachStats(iso(new Date(toDate(b).getTime()-55*864e5)));if(wk.n||r8.n)L.push(`・声かけ：今週${wk.n}人に連絡（直近8週：${r8.n}人に連絡→14日以内に${r8.hit}人来店）`);
   L.push(`・台帳に新しく登録 ${newC}人（合計${S.custs.length}人）`);if(sleep)L.push(`・しばらく来ていない常連 ${sleep}人`);
   const goods=es.filter(e=>(e.good||'').trim());if(goods.length){L.push('','■今週のいい話');goods.forEach(e=>L.push(`・${md(e.date)} ${e.good}`));}
   if(run.length||wait.length){L.push('','■施策');run.forEach(n=>L.push(`・実施中：${n}`));wait.forEach(n=>L.push(`・振り返り待ち：${n}`));}
@@ -751,7 +781,7 @@ function vCust(a,b){
     <label class="sr" for="c-q">お客様を探す</label><input id="c-q" data-nosave type="search" value="${esc(custQuery)}" placeholder="名前・会社・特徴・出身地で探す" autocomplete="off"></div>
   <div class="filters">${Object.entries(CF).filter(([k])=>k!=='noname'||S.custs.some(c=>c.needName)).map(([k,l])=>`<a href="#/cust/f/${k}" class="${k===f?'on':''}">${l}${k==='sleep'&&sleep?` ${sleep}`:k==='bday'&&bd?` ${bd}`:''}</a>`).join('')}</div>
   ${!S.custs.length?`<div class="panel empty"><p>名刺を交換した方や常連さんを登録しておくと、名前を忘れても「見た目の特徴」「会社」「出身地」から探せます。</p><a class="btn" href="#/cust/new">お客様を登録する</a></div>`
-   :`${f==='sleep'&&list.length?`<div class="callout">60日以上来ていない常連さんです。LINEや手紙で、近況と季節のおすすめを送ってみましょう。</div>`:''}
+   :`${f==='due'&&list.length?`<div class="callout">いつもの来店間隔を過ぎた方です。<a href="#/reach">LINE文案を作る</a></div>`:''}${f==='sleep'&&list.length?`<div class="callout">60日以上来ていない常連さんです。LINEや手紙で、近況と季節のおすすめを送ってみましょう。</div>`:''}
    <div class="clist" id="clist">${list.map(custRow).join('')||'<p class="note" style="padding:16px;margin:0">当てはまるお客様はいません。</p>'}</div>
    <p class="note" id="c-none" hidden style="text-align:center">見つかりません。言葉を変えて探すか、新しく登録してください。</p>
    <a class="btn block" href="#/cust/new">お客様を登録する</a>`}`;}
@@ -869,6 +899,15 @@ function vExpForm(id,tplKey){const isNew=id==='new',x=isNew?Object.assign({id:''
     ${isNew?'':`<button class="btn danger block" style="margin-top:10px" data-act="delExp" data-id="${x.id}">この施策を削除</button>`}</div>`;}
 
 /* ============ 記録 ============ */
+function vReach(){const L=dueList(),since=iso(new Date(Date.now()-56*864e5)),st=reachStats(since);
+  return `<a class="back" href="#/home">‹ ホーム</a>${demoBar()}<div class="phead"><h1>そろそろ声をかけたい人</h1><p>いつもの来店間隔を過ぎた常連さんと、今月が誕生月の方です。一斉に送るより、こうして選んで送る方が来店につながります。</p></div>
+  <div class="panel"><h3>声かけの結果<small>直近8週</small></h3><p style="margin:0;font-size:15px">連絡した <b style="font-size:20px">${st.n}</b>人 → 14日以内に来店 <b style="font-size:20px">${st.hit}</b>人${st.n?`（${Math.round(st.hit/st.n*100)}%）`:''}</p></div>
+  ${L.length?L.map(({c,d})=>`<div class="panel reach" id="rc-${c.id}"><div class="rh"><a href="#/cust/${c.id}"><b>${esc(c.name)}さん</b></a><span class="tag ${d.kind==='bday'?'':'warn'}">${esc(d.why)}</span></div>
+    <div class="sb">${esc([c.feature,c.from&&('出身 '+c.from),(c.likes||[]).slice(0,2).join('・')].filter(Boolean).join('／'))||'　'}${lastWords(c)?`<br>前回の話：${esc(String(lastWords(c)).slice(0,40))}`:''}</div>
+    <textarea id="dr-${c.id}" data-nosave rows="5" class="draft">${esc(draftFor(c,d))}</textarea>
+    <p class="note" style="margin:4px 0 8px">送る前に内容を確認して、必要なら直してください。</p>
+    <div class="btns"><button class="btn small" data-act="sendDraft" data-id="${c.id}">LINEで送る</button><button class="btn ghost small" data-act="copyDraft" data-id="${c.id}">コピー</button><button class="btn ghost small" data-act="contacted" data-id="${c.id}">連絡した</button></div></div>`).join('')
+  :'<div class="panel empty"><p>今は声をかけたい人はいません。お客様のページで「今日来店した」を押していくと、いつもの来店間隔がわかり、ここに出てくるようになります。</p></div>'}`;}
 function vClose(){const date=R[1]||bizDate(),e=S.days[date]||{},d=toDate(date),m=date.slice(0,7);
   const done=monthEntries(m).filter(x=>x.sales!=null).length,biz=S.settings.bizDays||26,vis=S.custs.filter(c=>(c.visits||[]).includes(date)).length;
   return `<a class="back" href="#/home">‹ ホーム</a>${demoBar()}<div class="phead"><h1>今日の締め</h1><p>閉店後に20秒。売上と客数、今日いちばんよかったことを残します。</p></div>
@@ -908,6 +947,7 @@ function vSettings(){const s=S.settings,bytes=(()=>{try{return (localStorage.get
     <div class="field"><label for="s-name">店名</label><input id="s-name" value="${esc(s.name)}" placeholder="例：みやこんじょ"></div>
     <div class="grid2"><div class="field"><label for="s-seats">席数</label><input id="s-seats" type="number" inputmode="numeric" value="${s.seats??''}"></div><div class="field"><label for="s-biz">月の営業日数</label><input id="s-biz" type="number" inputmode="numeric" value="${s.bizDays??''}"></div></div>
     <div class="grid2"><div class="field"><label for="s-target">月の売上目標（円）</label><input id="s-target" type="number" inputmode="numeric" value="${s.target??''}"></div><div class="field"><label for="s-ticket">目標客単価（円）</label><input id="s-ticket" type="number" inputmode="numeric" value="${s.ticket??''}" placeholder="任意"></div></div>
+    <div class="field"><label for="s-owner">LINE文案に入れるお名前<span class="hint">例：りゅう</span></label><input id="s-owner" value="${esc(s.owner||'')}" autocomplete="off"></div>
     <div class="field"><label for="s-advisor">週間報告を送る相手</label><input id="s-advisor" value="${esc(s.advisor||'周平さん')}"></div></div>
   <div class="panel"><h3>データの保存先</h3><p class="note" style="margin-top:0"><b style="color:var(--ink)">記録は、開いているアプリ（ブラウザ）ごとに別々に保存されます。</b>LINEの中、Safari、Chromeで開くと、それぞれ別の記録になります。いつも同じ場所から開けるよう、SafariやChromeで開いてホーム画面に追加し、そのアイコンから開いてください。<br><br>記録はすべてこの端末の中だけに自動で保存されます。インターネットにはどこにも送られません。お客様の名刺写真もこの端末の中です。<br>
     いまの使用量：約${Math.round(bytes/1024)}KB（写真を除く）。スマホのブラウザの履歴やWebサイトデータを消すと、記録も消えます。</p></div>
@@ -976,7 +1016,7 @@ const SAVERS={
     setSt('cust-st','自動で保存しました。');},
   fl(){const m=flMonth;putMonth(m,Object.assign({},S.months[m],{sales:nn(val('fl-sales')),food:nn(val('fl-food')),labor:nn(val('fl-labor'))}));},
   line(){const m=val('km')||kpiMonth;putMonth(m,Object.assign({},S.months[m],{line:nn(val('k-line'))}));},
-  set(){S.settings={name:val('s-name').trim(),seats:nn(val('s-seats')),bizDays:nn(val('s-biz'))||26,target:nn(val('s-target')),ticket:nn(val('s-ticket')),advisor:val('s-advisor').trim()||'周平さん'};saveAll();},
+  set(){S.settings=Object.assign({},S.settings,{owner:val('s-owner').trim(),name:val('s-name').trim(),seats:nn(val('s-seats')),bizDays:nn(val('s-biz'))||26,target:nn(val('s-target')),ticket:nn(val('s-ticket')),advisor:val('s-advisor').trim()||'周平さん'});saveAll();},
   exp(){const form=$('#expform');if(!form)return;const name=val('x-name').trim();let id=form.dataset.id;
     if(!name){setSt('exp-st',id?'施策名が空欄のため、前の名前のまま保存されています。':'施策名を入れると自動で保存されます。');return;}
     const s=val('x-start'),e=val('x-end');if(s&&e&&e<s){setSt('exp-st','終了日が開始日より前になっています。');return;}
@@ -1020,6 +1060,11 @@ document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-a
     delCand(){const c=S.value.cands.slice(),r=c.splice(+el.dataset.i,1)[0];S.value=Object.assign({},S.value,{cands:c,adopted:r===S.value.adopted?null:S.value.adopted});saveAll();render();},
     copy(){const i=+el.dataset.i,t=TPL[i][1],fb=()=>{const pre=document.getElementById('tpl-'+i),r=document.createRange();r.selectNodeContents(pre);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('文章を選択しました。コピーしてください');};
       try{navigator.clipboard.writeText(t).then(()=>toast('コピーしました'),fb);}catch(e){fb();}},
+    async sendDraft(){const id=el.dataset.id,t=val('dr-'+id);try{if(navigator.share){await navigator.share({text:t});markContact(id,'LINE');return;}}catch(e){if(e&&e.name==='AbortError')return;}
+      location.href='https://line.me/R/share?text='+encodeURIComponent(t);markContact(id,'LINE');},
+    copyDraft(){const id=el.dataset.id,t=val('dr-'+id),fb=()=>{const ta=$('#dr-'+id);ta.focus();ta.select();toast('文章を選択しました。コピーしてください');};
+      try{navigator.clipboard.writeText(t).then(()=>toast('コピーしました。送ったら「連絡した」を押してください'),fb);}catch(e){fb();}},
+    contacted(){markContact(el.dataset.id,'手動');},
     via(){flushForms();const c=S.custs.find(x=>x.id===el.dataset.id);if(!c)return;const via=Object.assign({},c.via),d=el.dataset.date,v=el.dataset.v;
       if(via[d]===v)delete via[d];else via[d]=v;upsert('custs',Object.assign({},c,{via}));
       el.closest('.chips').querySelectorAll('[data-act="via"]').forEach(b=>{const on=via[d]===b.dataset.v;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});toast(via[d]?`きっかけ：${v}`:'きっかけを外しました');},
@@ -1059,6 +1104,9 @@ document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-a
     exitDemo(){exitDemo();},
   };
   if(A[act]){ev.preventDefault();try{await A[act]();}catch(err){console.error(err);toast('うまく処理できませんでした：'+(err&&err.message||''));}}});
+function markContact(id,kind){const c=S.custs.find(x=>x.id===id);if(!c)return;const d=today();const cs=(c.contacts||[]).filter(x=>x.date!==d);
+  upsert('custs',Object.assign({},c,{contacts:[...cs,{date:d,kind}].slice(-30)}));toast(`${c.name}さんに連絡した記録を残しました`);
+  const card=document.getElementById('rc-'+id);if(card){card.classList.add('sent');setTimeout(()=>{if(R[0]==='reach')render();},700);}}
 function download(name,text,type){const b=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
 const csvCell=v=>{v=v==null?'':String(v);return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
 const csvOut=(name,rows)=>{download(name,'﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv');toast('保存しました');};
