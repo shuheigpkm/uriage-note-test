@@ -333,8 +333,8 @@ nav.bn a.add .ic svg{width:22px;height:22px}
 /* ============ 保存（この端末の中だけ） ============ */
 const LKEY='stg_growth-note-v2',PREF='stg_growth-note-pref-v2';
 const WD=['日','月','火','水','木','金','土'];
-const defSettings=()=>({name:'',seats:null,bizDays:26,target:null,ticket:null,advisor:'周平さん',owner:''});
-const SCHEMA=3;
+const defSettings=()=>({name:'',seats:null,bizDays:26,target:null,ticket:null,advisor:'周平さん',owner:'',fixed:null});
+const SCHEMA=4;
 const blank=()=>({schema:SCHEMA,settings:defSettings(),days:{},months:{},talks:[],exps:[],custs:[],todo:{},value:{answers:{},cands:[],adopted:null}});
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
 let S=blank(),mode='local',REAL=null,storageOK=true;
@@ -342,7 +342,8 @@ const pref=Object.assign({entryTab:'talk',lastBackup:0,lastReport:0,reportNote:'
 const savePref=()=>{try{store.set(PREF,pref);}catch(e){}};
 /* 版ごとの移行。古い版のデータを読んだら、新しい形に順番に直す（項目は足すだけで消さない） */
 const MIGRATE={
-  3:D=>D /* v2→v3：形は同じ。版番号だけ付ける */
+  3:D=>D, /* v2→v3：形は同じ。版番号だけ付ける */
+  4:D=>{(D.exps||[]).forEach(x=>{if(x&&x.pillar==='p2')x.pillar='p3';});return D;} /* v3→v4：6つの取り組み→7つの段階 */
 };
 function migrate(D){let v=+D.schema||2;while(v<SCHEMA){v++;if(MIGRATE[v])D=MIGRATE[v](D)||D;}D.schema=SCHEMA;return D;}
 function load(){const L=store.get(LKEY,null);if(L){const old=+L.schema||2;
@@ -424,58 +425,88 @@ const Q={
 };
 const CORE=['seg','from','vis','ch'],MORE=['purpose','age','n','likes','topics','wants','sat'];
 
-/* ============ 6つの柱 ============ */
+/* ============ 7つの段階（IDは旧版のまま残し、表示順は n で決める） ============ */
 const P=[
- {id:'p1',n:1,name:'数字で店を分解する',lead:'売上＝客数×客単価×来店頻度。どこを伸ばすかで打ち手が変わります。利益まで見ないと、施策が当たっても儲からないことがあります。',tabs:[['todo','推奨案'],['month','月次'],['week','曜日・天気'],['fl','FL比率'],['data','データ']]},
- {id:'p2',n:2,name:'お客さんを理解する',lead:'会話の中で自然に聞いたことを、タップで残します。客層ごとに来る理由、喜ぶもの、知ったきっかけが見えてきます。',tabs:[['todo','推奨案'],['talk','会話メモ'],['ana','分析']]},
- {id:'p3',n:3,name:'独自の価値を一言にする',lead:'地鶏や焼酎は他の宮崎料理店にもあります。店主の人柄や場の空気のように、真似されにくい価値を言葉にします。',tabs:[['todo','推奨案'],['sheet','ワークシート']]},
- {id:'p4',n:4,name:'集客の入口を整える',lead:'小規模店ではGoogleマップと口コミが最も費用対効果が高い傾向があります。お金をかける前に、無料でできる入口から固めます。',tabs:[['todo','推奨案'],['res','経路の実績']]},
- {id:'p5',n:5,name:'リピートの仕組みを作る',lead:'飲食店の利益は2回目以降の来店で生まれます。名前と好みを覚え、一度来た人とつながり続ける仕組みを作ります。',tabs:[['todo','推奨案'],['tpl','文例'],['kpi','指標']]},
- {id:'p6',n:6,name:'仮説と検証を回す',lead:'施策ごとに「何を・何人・いくら」を先に決め、終わったら数字で振り返ります。日々の記録から効果を自動で計算します。',tabs:[['list','施策'],['todo','推奨案']]},
+ {id:'p1',n:1,name:'数字で店を分解する',lead:'売上＝客数×客単価×来店頻度。どこが弱いかで、このあとの打ち手の順番が変わります。利益まで見ないと、施策が当たっても儲からないことがあります。',tabs:[['todo','推奨案'],['month','月次'],['week','曜日・天気'],['fl','FL比率'],['data','データ']]},
+ {id:'p3',n:2,name:'店の顔を決める',lead:'誰に、何を目当てに来てもらう店なのか。一言と一番商品が決まると、口コミ・看板・地図のすべてに同じ軸が通ります。',tabs:[['todo','推奨案'],['sheet','一言ワーク'],['talk','会話メモ'],['ana','分析']]},
+ {id:'p4',n:3,name:'集客の入口を整える',lead:'店探しの約7割がGoogleマップを使います。お金をかける前に、無料でできる入口から固めます。',tabs:[['todo','推奨案'],['res','経路の実績']]},
+ {id:'p7',n:4,name:'「2回目の壁」を越える',lead:'初めて来た人が再び来るのは約10%。3回来ると約半分が通い続けます。最初の1週間の接点が勝負です。',tabs:[['todo','推奨案'],['tpl','文例']]},
+ {id:'p5',n:5,name:'常連にする',lead:'行かなくなる理由の最多は「なんとなく忘れていた」。また来る理由と、思い出してもらう接点を作り続けます。',tabs:[['todo','推奨案'],['tpl','文例'],['kpi','指標']]},
+ {id:'p8',n:6,name:'客単価と利益を上げる',lead:'客数の土台ができたら、一人あたりの単価と一品あたりの利益を見直します。値上げは品目を絞り、理由を添えて。',tabs:[['todo','推奨案']]},
+ {id:'p6',n:7,name:'試して確かめる',lead:'施策ごとに「何を・何人・いくら」を先に決め、終わったら数字で振り返ります。日々の記録から効果を自動で計算します。',tabs:[['list','施策'],['todo','推奨案']]},
 ];
 const PM=Object.fromEntries(P.map(p=>[p.id,p]));
 const filledMonths=k=>Object.values(S.months).filter(m=>m&&m[k]!=null).length;
 const answered=()=>['why','owner','only','win'].filter(k=>(S.value.answers[k]||'').trim()).length;
+const viaCount=v=>S.custs.reduce((n,c)=>n+Object.values(c.via||{}).filter(x=>x===v).length,0);
+const contactCount=()=>S.custs.reduce((n,c)=>n+(c.contacts||[]).length,0);
+const expLike=re=>S.exps.some(x=>re.test(x.name||''));
+const thankedFirst=()=>S.custs.some(c=>{const v=custVisits(c);return v.length&&(c.contacts||[]).some(x=>x.date>=v[0]&&(toDate(x.date)-toDate(v[0]))/864e5<=3);});
 const T=[
+ /* ① 数字で店を分解する */
  {p:'p1',id:'p1-set',pri:'hot',t:'月の目標・席数・営業日数を決める',auto:()=>!!(S.settings.target&&S.settings.seats),why:'目標がないと、進み具合も「あといくら足りないか」も分かりません。',how:'設定に月の売上目標、席数、月の営業日数を入れます。目標は前年同月の売上×1.1が最初の目安です。',link:['settings','設定を開く']},
- {p:'p1',id:'p1-daily',pri:'hot',t:'売上と客数を毎日記録する（まず7日分）',auto:()=>Object.keys(S.days).length>=7,why:'売上を客数と客単価に分けるだけで、伸ばすべき方向が見えます。',how:'レジ締めのついでに、売上・客数・メモの3つだけ入れます。入れた瞬間に自動保存されます。',link:['entry/sales','今日の売上を記録する']},
- {p:'p1',id:'p1-weak',pri:'mid',t:'一番弱い曜日を見つける（4週分たまったら）',auto:()=>Object.keys(S.days).length>=28,why:'弱い曜日を平均並みに上げるのが、最も確実な伸びしろです。',how:'「曜日・天気」タブで全体比が最も低い曜日を確認し、その曜日だけの企画を⑥で試します。',link:['p/p1/week','曜日・天気を見る']},
- {p:'p1',id:'p1-fl',pri:'mid',t:'月の原価と人件費を記録してFL比率を出す',auto:()=>Object.values(S.months).some(m=>m&&m.food!=null&&m.labor!=null),why:'売上が伸びても、原価と人件費が膨らめば利益は残りません。',how:'月末に食材・ドリンクの仕入れ額と人件費を入れます。一般的な目安はFL比率60%以下です。',link:['p/p1/fl','FL比率を入れる']},
- {p:'p1',id:'p1-freq',pri:'',t:'来店頻度をつかむ（会話メモで来店回数を残す）',auto:()=>S.talks.filter(t=>t.vis).length>=10,why:'客数が同じでも、常連が支えているのか新規が多いのかで打ち手は逆になります。',how:'会話メモで「来店は何回目」をタップするだけで、再来店率が自動で出ます。',link:['entry/talk','会話メモを書く']},
- {p:'p2',id:'p2-20',pri:'hot',t:'会話メモを20組分ためる',auto:()=>S.talks.length>=20,why:'20組分あれば、客層の偏りと知ったきっかけの傾向がはっきり見えます。',how:'お見送りの後に、聞けたところだけタップします。全部埋めなくて大丈夫です。',link:['entry/talk','会話メモを書く']},
- {p:'p2',id:'p2-core',pri:'mid',t:'一番大事な客層を1つ決める',why:'全員に向けた言葉は誰にも刺さりません。売上を支える客層に絞ります。',how:'「お客さん」の「分析」にある「客層ごとの特徴」で、人数が多い客層と、常連が多い客層を比べて決めます。',link:['cust/ana','分析を見る']},
- {p:'p2',id:'p2-words',pri:'',t:'客層ごとに刺さる言葉を決める',why:'同じ店でも、宮崎出身者と近隣の人では来たくなる理由が違います。',how:'宮崎出身者には「帰ってこられる場所」、宮崎好きには「旅の記憶の味」、近隣の人には「気軽さと看板の一品」が基本線です。会話メモの一言から実際の言葉を拾います。'},
- {p:'p3',id:'p3-sheet',pri:'hot',t:'4つの問いに答える',auto:()=>answered()>=4,why:'独自の価値は考えて作るものではなく、すでにある事実から見つけるものです。',how:'「ワークシート」で、常連が通う理由や店主にしかないものを書き出します。会話メモの一言が一番のヒントです。',link:['p/p3/sheet','ワークシートを開く']},
- {p:'p3',id:'p3-cand',pri:'mid',t:'一言の候補を3つ作る',auto:()=>S.value.cands.length>=3,why:'1つだけだと比べられません。3案あると、どれが一番「らしい」か判断できます。',how:'ワークシート下の組み立てツールで「誰が・何を・どんな店」を入れて候補を作ります。',link:['p/p3/sheet','組み立てる']},
- {p:'p3',id:'p3-vote',pri:'',t:'常連さん5人に候補を見せて選んでもらう',auto:()=>!!S.value.adopted,why:'店側が言いたいことと、お客さんが感じている価値はよくずれます。',how:'「どれが一番この店っぽいですか」と聞くだけで十分です。選ばれた候補を「採用」にします。'},
- {p:'p3',id:'p3-apply',pri:'',t:'採用した一言をお店の顔に反映する',why:'一言は使われて初めて意味があります。',how:'Googleマップの説明文、Instagramのプロフィール、店頭の看板やメニューの表紙に同じ言葉を入れます。'},
- {p:'p4',g:'Googleマップ',id:'p4-gbp',pri:'hot',t:'営業時間・メニュー・電話番号を最新にする',why:'情報が古いだけで来店を逃します。検索した人が最初に見るのがここです。',how:'Googleビジネスプロフィールで、営業時間（臨時休業を含む）、メニューと価格、予約方法を更新します。'},
- {p:'p4',g:'Googleマップ',id:'p4-photo',pri:'hot',t:'写真を20枚以上登録する',why:'写真が多いお店ほど、詳細を見られる回数が増える傾向があります。',how:'看板料理（地鶏の炭火焼、チキン南蛮など）、店内、店主の顔、焼酎の棚を明るい時間に撮ります。料理は真上と斜め45度の2枚ずつ。'},
- {p:'p4',g:'Googleマップ',id:'p4-review',pri:'hot',t:'口コミをお願いする仕組みを作る',why:'口コミの数と新しさは、地図での表示順と来店の決め手の両方に効きます。',how:'口コミ投稿ページのQRコードを卓上カードにして、お会計時に一言添えます。文例は⑤の文例タブにあります。',link:['p/p5/tpl','文例を見る']},
- {p:'p4',g:'Googleマップ',id:'p4-reply',pri:'mid',t:'口コミに全件返信する',why:'返信は、これから来る人への接客です。',how:'2日以内に、内容に触れて返します。低評価にも事実の説明と改善を短く書きます。'},
- {p:'p4',g:'Instagram',id:'p4-ig',pri:'mid',t:'プロフィールに一言と予約方法を入れる',why:'Googleマップから流れてきた人が最後に確認するのがInstagramです。',how:'③で決めた一言、営業時間、予約方法を1行ずつ。',link:['p/p3/sheet','一言を決める']},
- {p:'p4',g:'Instagram',id:'p4-post',pri:'',t:'週2回、料理と人が見える投稿をする',why:'料理だけの投稿はどこも同じに見えます。店主の顔と言葉が差になります。',how:'今日のおすすめと店主の一言を、営業前の16時台に投稿します。'},
+ {p:'p1',id:'p1-daily',pri:'hot',t:'売上と客数を毎日記録する（まず7日分）',auto:()=>Object.keys(S.days).length>=7,why:'売上を客数と客単価に分けると、客数と単価のどちらが問題かが分かります。ここからすべてが始まります。',how:'閉店後に「今日の締め」で売上・客数・今日のいい話の3つだけ入れます。20秒で終わります。',link:['close','今日の締めを開く']},
+ {p:'p1',id:'p1-bep',pri:'mid',t:'損益分岐点と「1日に必要な客数」を出す',auto:()=>!!S.settings.fixed,why:'毎日の合格ラインが分かると、暇な日に何人足りないかがその場で分かります。',how:'設定に月の固定費（家賃・人件費・光熱費など）を入れると、月次の画面に損益分岐点と1日に必要な客数が出ます。',link:['settings','固定費を入れる']},
+ {p:'p1',id:'p1-fl',pri:'mid',t:'月の原価と人件費を記録してFL比率を出す',auto:()=>Object.values(S.months).some(m=>m&&m.food!=null&&m.labor!=null),why:'売上が伸びても、原価と人件費が膨らめば利益は残りません。居酒屋の目安はFL比率60%以内です。',how:'月末に食材・ドリンクの仕入れ額と人件費を入れます。',link:['p/p1/fl','FL比率を入れる']},
+ {p:'p1',id:'p1-weak',pri:'mid',t:'一番弱い曜日を見つける（4週分たまったら）',auto:()=>Object.keys(S.days).length>=28,why:'弱い曜日を平均並みに上げるのが、最も確実な伸びしろです。',how:'「曜日・天気」タブで全体比が最も低い曜日を確認し、その曜日だけの企画を⑦で試します。',link:['p/p1/week','曜日・天気を見る']},
+ {p:'p1',id:'p1-freq',pri:'mid',t:'常連と新規の比率をつかむ',auto:()=>S.talks.filter(t=>t.vis).length>=10||S.custs.filter(c=>custVisits(c).length>=2).length>=10,why:'新規が少ないのか、2回目につながっていないのかで、③と④のどちらを先にやるかが変わります。アプリはこの比率で推奨の順番を入れ替えます。',how:'会話メモの「来店は何回目」をタップするか、お客様のページで「今日来店した」を押していくと、自動で比率が出ます。',link:['entry/talk','会話メモを書く']},
+ /* ② 店の顔を決める */
+ {p:'p3',id:'p2-20',pri:'hot',t:'会話メモを20組分ためる',auto:()=>S.talks.length>=20,why:'20組分あれば、客層の偏りと知ったきっかけの傾向がはっきり見えます。',how:'お見送りの後に、聞けたところだけタップします。全部埋めなくて大丈夫です。',link:['entry/talk','会話メモを書く']},
+ {p:'p3',id:'p2-core',pri:'mid',t:'一番大事な客層を1つ決める',why:'全員に向けた言葉は誰にも刺さりません。売上を支える客層に絞ります。',how:'「分析」で人数が多い客層と常連が多い客層を比べて決めます。宮崎出身者には「帰ってこられる場所」、宮崎好きには「旅の記憶の味」、近隣の人には「気軽さと一番商品」が基本線です。',link:['p/p3/ana','分析を見る']},
+ {p:'p3',id:'p3-vote',pri:'hot',t:'店の一言を決める（3案→常連5人に選んでもらう）',auto:()=>!!S.value.adopted,why:'独自の価値は考えて作るものではなく、すでにある事実から見つけるものです。店側の言いたいことと、お客さんが感じている価値はよくずれます。',how:'「一言ワーク」の4つの問いに答え、「〇〇（宮崎の地名）の△△が食べられる店」の形で3案作ります。常連さん5人に「どれが一番この店っぽいですか」と聞いて、選ばれた案を採用にします。',link:['p/p3/sheet','一言ワークを開く']},
+ {p:'p3',id:'p3-signature',pri:'hot',t:'一番商品を1品に決める',why:'「これを食べに行こう」という理由が、口コミ・看板・地図の写真・メニュー表のすべての軸になります。',how:'注文数が多く、他の宮崎料理店にない工夫がある1品を選びます（地鶏の炭火焼、チキン南蛮など）。決めたら、メニュー表の最初、看板、Googleマップの1枚目の写真に置きます。'},
+ {p:'p3',id:'p3-price',pri:'mid',t:'価格を明示し、お通し代をメニューに書く',why:'「価格が明示されている・会計がわかりやすい」は、また行きたくなる理由の34.4%を占めます。',how:'時価の品をなくすか目安の価格を書き、お通しの有無と金額をメニューに明記します。外国の方向けに英語でも一行添えます。'},
+ {p:'p3',id:'p3-qsc',pri:'mid',t:'接客の基準を3つだけ決める',why:'通った店から離れた理由の最多は「接客で不快」46%。料理より先に体験が評価されます。',how:'「最初のドリンクは3分以内」「トイレは2時間ごとに確認」「全組を外までお見送り」のように、数字で守れる基準を3つ決めて、毎日確認します。'},
+ {p:'p3',id:'p3-apply',pri:'',t:'一言と一番商品をお店の顔に反映する',why:'一言は使われて初めて意味があります。',how:'Googleマップの説明文、Instagramのプロフィール、店頭の看板、メニューの表紙に同じ言葉と一番商品を入れます。'},
+ /* ③ 集客の入口を整える */
+ {p:'p4',g:'Googleマップ',id:'p4-gbp',pri:'hot',t:'営業時間・メニュー・予約方法を最新にする',why:'店探しの約7割がGoogleマップを使います。情報が古いだけで来店を逃します。',how:'Googleビジネスプロフィールのオーナー確認を取り、営業時間（臨時休業を含む）、メニューと価格、予約リンクを登録します。'},
+ {p:'p4',g:'Googleマップ',id:'p4-photo',pri:'hot',t:'写真を30枚載せる（一番商品を先頭に）',why:'写真が多いお店ほど、詳細を見られる回数が増える傾向があります。',how:'一番商品、地鶏・チキン南蛮・冷や汁などの料理、店内、外観、店主の顔、焼酎の棚。料理は真上と斜め45度の2枚ずつ、明るい時間に撮ります。'},
+ {p:'p4',g:'Googleマップ',id:'p4-review',pri:'hot',t:'口コミをお願いする仕組みを作る（特典は付けない）',why:'口コミの数と新しさは、地図での表示順と来店の決め手の両方に効きます。',how:'口コミ投稿ページのQRコードを卓上カードにして、お会計時に全員へ一言添えます。割引やドリンクと引き換えにする、良い口コミを書いてくれそうな人だけに頼む、身内に書かせる、の3つはGoogleの規約違反で、特典はステマ規制（景品表示法）にも触れます。',link:['p/p5/tpl','文例を見る']},
+ {p:'p4',g:'Googleマップ',id:'p4-reply',pri:'mid',t:'口コミに24時間以内に全件返信する',why:'返信は、これから来る人への接客です。',how:'内容に触れる一文を入れて返します。低評価にも、事実の説明と改善を短く書きます。'},
+ {p:'p4',g:'店頭',id:'p4-front',pri:'mid',t:'店頭に「宮崎料理」・一番商品・価格帯を出す',why:'外から中が分からない店に、初めての人は入りません。',how:'A型看板や窓に、店の一言・一番商品の写真・一人あたりの目安を出します。看板は自分の敷地内に置きます（歩道に出すと道路法違反です）。'},
+ {p:'p4',g:'Instagram',id:'p4-ig',pri:'mid',t:'プロフィールに一言と予約方法を入れる',why:'Instagramで店を知っても、来店にはつながりにくいと言われます。予約先と営業時間を明示して背中を押します。',how:'②で決めた一言、営業時間、予約方法を1行ずつ。',link:['p/p3/sheet','一言を決める']},
+ {p:'p4',g:'Instagram',id:'p4-post',pri:'',t:'週1〜2回、料理と店主が見える投稿をする',why:'料理だけの投稿はどこも同じに見えます。店主の顔と言葉が差になります。',how:'今日のおすすめと店主の一言を、営業前の16時台に。15秒のリール（焼き場、焼酎を注ぐ手元）も効きます。'},
  {p:'p4',g:'宮崎つながり',id:'p4-kenjin',pri:'mid',t:'県人会・同郷の集まりで使ってもらう',why:'宮崎出身者は「宮崎の店」を探しています。団体予約は1回で売上が大きく動きます。',how:'幹事向けに飲み放題プランと幹事特典を用意します。お客様台帳で「幹事をよくする」「県人会」の方に絞ると、声をかける相手がすぐ分かります。',link:['cust','お客様台帳を開く']},
+ {p:'p4',g:'宴会・団体',id:'p4-banquet',pri:'mid',t:'宴会コースを決め、ネットで予約できるようにする',why:'幹事が一番面倒なのは店選びと予約です。迷わず決められる店が選ばれます。',how:'2〜3時間飲み放題付きのコースを2つ（標準と宮崎づくし）に絞り、Googleマップと予約サイトに載せます。11〜12月の忘年会前が勝負です。'},
  {p:'p4',g:'宮崎つながり',id:'p4-antenna',pri:'',t:'宮崎関連の場所やコミュニティに店の情報を置く',why:'宮崎に興味がある人が集まる場所は、最も確度の高い入口です。',how:'宮崎県のアンテナショップや宮崎ゆかりのSNSコミュニティに、ショップカードや紹介を置かせてもらえるか相談します。'},
- {p:'p4',g:'イベント',id:'p4-event',pri:'mid',t:'交流会を定例化して、本店へ送客する',why:'イベントは新規と出会う場です。一度で終わらせず、本店の常連に変えて初めて売上になります。',how:'名刺交換した方はその場でお客様台帳に登録し、本店で使える次回特典を渡します。効果は⑥で施策として記録します。',link:['p/p6/list','施策に登録する']},
+ {p:'p4',g:'イベント',id:'p4-event',pri:'mid',t:'交流会を定例化して、本店へ送客する',auto:()=>viaCount('イベント')+viaCount('姉妹店から')>=3,why:'イベントは新規と出会う場です。一度で終わらせず、本店の常連に変えて初めて売上になります。',how:'名刺は「名刺を撮って登録」でその場で残し、来店のきっかけに「イベント」「姉妹店から」を付けます。効果は⑦で施策として記録します。',link:['p/p6/list','施策に登録する']},
  {p:'p4',g:'グルメサイト',id:'p4-gourmet',pri:'',t:'有料掲載は費用対効果を測ってから決める',why:'掲載料に見合う予約が来ているかは、測らないと分かりません。',how:'「掲載料÷そのサイト経由の予約組数」で1組あたりの獲得費用を出し、客単価×人数の粗利と比べます。'},
- {p:'p5',id:'p5-regular',pri:'hot',t:'名刺交換した方・常連さんをお客様台帳に登録する',auto:()=>S.custs.length>=10,why:'「覚えてくれている」が、他店に移らない一番の理由になります。名前を忘れると、せっかくのつながりが途切れます。',how:'名刺を受け取ったらその場で写真を撮り、見た目の特徴（眼鏡、声が大きい、など）を一言添えます。名前を忘れても、特徴や会社名で探せます。',link:['entry/cust','お客様を登録する']},
- {p:'p5',id:'p5-line',pri:'hot',t:'LINE公式アカウントを開設する',why:'一度来た人に、もう一度来る理由を届けられる手段です。',how:'無料プランで始められます。アカウント名は店名、プロフィールに③の一言を入れます。'},
- {p:'p5',id:'p5-ask',pri:'hot',t:'お会計時にLINE登録をお願いする',why:'登録数は声かけの有無でほぼ決まります。',how:'卓上にQRコード、お会計時に一言添えます。登録特典（次回一品サービスなど）があると登録率が上がります。',link:['p/p5/tpl','声かけの文例']},
- {p:'p5',id:'p5-sleep',pri:'mid',t:'しばらく来ていない常連さんに連絡する',why:'離れかけた常連さんは、一声かけるだけで戻ってくることが多いです。',how:'お客様台帳の「しばらく来ていない」で、60日以上来ていない常連さんを確認し、LINEや手紙で近況と季節のおすすめを送ります。',link:['cust/f/sleep','該当するお客様を見る']},
- {p:'p5',id:'p5-card',pri:'mid',t:'2回目の来店特典を用意する',why:'1回目から2回目が最も離脱が大きい段階です。',how:'「次回、宮崎の◯◯を一品サービス」など原価の低い特典を、有効期限1か月で渡します。'},
- {p:'p5',id:'p5-msg',pri:'mid',t:'月に1〜2回、LINEで配信する',why:'思い出してもらえれば、また来てくれます。送りすぎるとブロックされます。',how:'旬の宮崎食材の入荷、イベント告知、雨の日限定特典などを短く送ります。',link:['p/p5/tpl','配信の文例']},
- {p:'p5',id:'p5-kpi',pri:'',t:'LINEの友だち数を毎月記録する',auto:()=>filledMonths('line')>=2,why:'増え方を見れば、声かけが続いているか分かります。',how:'月末に友だち数を「指標」タブに入れます。',link:['p/p5/kpi','指標を開く']},
- {p:'p6',id:'p6-first',pri:'hot',t:'最初の施策を登録する',auto:()=>S.exps.length>=1,why:'目標を先に決めないと、終わってから「よかった気がする」で終わります。',how:'施策タブの「新しい施策を登録する」から、期間・目標・かかる費用を入れます。テンプレートからも作れます。',link:['exp/new','施策を登録する']},
- {p:'p6',id:'p6-review',pri:'mid',t:'終わった施策を振り返る',auto:()=>S.exps.some(x=>(x.review||'').trim()),why:'振り返りがない施策は、次に活かせません。',how:'期間が終わると成果が自動で計算されます。目標との差と、次にどうするかを書きます。'},
- {p:'p6',id:'p6-one',pri:'',t:'同時に試す施策は1つまでにする',why:'同時にいくつも始めると、何が効いたのか分からなくなります。',how:'実施中の施策が終わってから次を始めます。'},
+ /* ④ 「2回目の壁」を越える */
+ {p:'p7',id:'p5-regular',pri:'hot',t:'名刺交換した方・常連さんをお客様台帳に登録する',auto:()=>S.custs.length>=10,why:'初めて来た人が再び来るのは約10%。名前を覚えていることが、2回目に来る一番の理由になります。',how:'「名刺を撮って登録」で撮るだけ。見た目の特徴を一言添えれば、名前を忘れても探せます。',link:['entry/cust','名刺を撮って登録']},
+ {p:'p7',id:'p7-sendoff',pri:'hot',t:'全組を店の外までお見送りする',why:'最後の印象が「また来たい」を決めます。お見送りは費用ゼロでできる最強の接客です。',how:'姿が見えなくなるまで見送ります。そのあと会話メモに、聞けたことを1つだけ残します。'},
+ {p:'p7',id:'p5-line',pri:'hot',t:'LINE公式アカウントを開設し、お会計時に登録をお願いする',auto:()=>filledMonths('line')>=1,why:'一度来た人と、つながり続けられる手段です。登録数は声かけの有無でほぼ決まります。',how:'無料プランで始め、卓上にQRコード、お会計時に一言添えます。月末に友だち数を「常連にする」の指標タブに入れます。',link:['p/p7/tpl','声かけの文例']},
+ {p:'p7',id:'p7-thanks',pri:'mid',t:'初めて来た方に、翌日お礼を送る',auto:thankedFirst,why:'行かなくなる理由の最多は「なんとなく忘れていた」。翌日の一言で、店を思い出す回数が1回増えます。',how:'名刺やLINEがわかる方に、翌日お礼と「次はこれを食べてほしい」を一言。送ったらお客様のページで「連絡した」を押すと記録されます。'},
+ {p:'p7',id:'p5-card',pri:'mid',t:'2回目の来店特典を用意する（値引きより宮崎の一品）',why:'1回目から2回目が最も離脱が大きい段階です。値引き目当ての客は定着しにくいので、店らしさのある特典にします。',how:'「次回、宮崎の◯◯を一品サービス」など原価の低い特典を、有効期限1か月で渡します。'},
+ {p:'p7',id:'p7-name',pri:'mid',t:'2回目の方を名前で迎え、前回の話に触れる',auto:()=>(pref.cardDays||[]).length>=7,why:'「覚えてくれている」が、他の店に移らない理由になります。3回来ると約半分が通い続けます。',how:'開店前にホームの「今日の話題カード」を見て、前回の話を1つ思い出しておきます。'},
+ /* ⑤ 常連にする */
+ {p:'p5',id:'p5-bottle',pri:'mid',t:'焼酎のボトルキープを勧める（名札と保管期限）',why:'「残りがもったいない」が来店の理由になり、割り物や料理の注文にもつながります。',how:'名前と日付の札を付け、保管期限（3〜6か月）を決めて店内に掲示します。宮崎の焼酎はここで店らしさを出せます。'},
+ {p:'p5',id:'p5-season',pri:'mid',t:'月替わりで季節の郷土料理を出す',why:'常連さんに「また来る理由」を毎月作ります。LINE配信の題材にもなります。',how:'旬の宮崎食材を1品、月の初めに切り替えます。黒板とLINEで告知します。'},
+ {p:'p5',id:'p5-msg',pri:'mid',t:'月に1〜2回、LINEで配信する',auto:()=>filledMonths('line')>=2,why:'思い出してもらえれば、また来てくれます。送りすぎるとブロックされます。',how:'季節の郷土料理、イベント告知、雨の日限定のおすすめなどを短く送ります。',link:['p/p5/tpl','配信の文例']},
+ {p:'p5',id:'p5-sleep',pri:'hot',t:'「そろそろの人」と誕生月の方に個別に声をかける',auto:()=>contactCount()>=3,why:'客層を絞った連絡は、一斉のクーポンの約7倍来店につながったという事例があります。',how:'ホームの「そろそろ声をかけたい人」に、いつもの来店間隔を過ぎた常連さんと誕生月の方が出ます。文案を直して送り、「連絡した」を押します。',link:['reach','そろそろの人を見る']},
+ {p:'p5',id:'p5-refer',pri:'',t:'常連さんに友人を紹介してもらう',auto:()=>viaCount('紹介')>=3,why:'常連さんの紹介で来る人は、最初から店の良さを知っていて定着しやすい新規です。',how:'「今度ぜひお知り合いと」と直接お願いし、紹介で来た方には来店のきっかけに「紹介」を付けます。お客様のページに紹介者も残せます。'},
+ /* ⑥ 客単価と利益を上げる */
+ {p:'p8',id:'p8-cost',pri:'mid',t:'全品の原価表を作る（地鶏は歩留まり込み）',why:'居酒屋の原価率の目安は30〜35%。どの品で利益が出ているかは、原価表がないと分かりません。',how:'1品ずつ、材料の仕入れ値×使う量で原価を出し、売価で割って原価率を一覧にします。鶏は仕込み後に使える量で計算します。'},
+ {p:'p8',id:'p8-matrix',pri:'mid',t:'メニューを「人気×利益」で4つに分ける',why:'人気も利益も高い品は目立たせ、どちらも低い品は減らす。メニューの数を絞るほど、仕込みも楽になります。',how:'1〜3か月の出数と1品あたりの粗利で、①人気も利益も高い ②人気だが利益が低い ③利益は高いが人気が低い ④どちらも低い、に分けます。②は量か価格を少し見直し、③は置き場所と説明を変え、④は削るか作り直します。'},
+ {p:'p8',id:'p8-menu',pri:'mid',t:'メニュー表を作り直す（一番商品と利益の高い品を最初に）',why:'メニュー表の作り直しで月の売上が約2倍になった居酒屋の事例があります。お客さんが最初に見る場所が一番売れます。',how:'表紙か1ページ目の左上に一番商品、その近くに利益の高い品。「本日のおすすめ」は入ってすぐ目に入る位置に置きます。'},
+ {p:'p8',id:'p8-flight',pri:'mid',t:'宮崎の焼酎3種の飲み比べを出す',auto:()=>expLike(/飲み比べ/),why:'ドリンク単価と宮崎らしさを同時に上げられます。おかわりの声かけのきっかけにもなります。',how:'芋・麦・そばなど味の違う3種を少量ずつ。⑦で施策として登録すると、ドリンク単価の変化を測れます。',link:['exp/new','施策に登録する']},
+ {p:'p8',id:'p8-early',pri:'',t:'弱い曜日・早い時間の限定メニューを作る',auto:()=>expLike(/平日|早い|曜/),why:'空いている時間に来る理由を作れば、席数を増やさずに客数が増えます。',how:'①で見つけた弱い曜日に、その日だけの一品や早い時間のセットを出し、SNSとGoogleマップで告知します。⑦で施策として測ります。',link:['exp/new','施策に登録する']},
+ {p:'p8',id:'p8-price',pri:'',t:'値上げは品目を絞り、1か月前に告知する',why:'一律の値上げは客離れを招く失敗例です。原価が上がった品だけ、理由と一緒に伝えます。',how:'原価表で上がった品を選び、量や盛り付けで価値を足してから、店内とLINEで1か月前に告知します。'},
+ /* ⑦ 試して確かめる */
+ {p:'p6',id:'p6-first',pri:'hot',t:'最初の施策を目標つきで登録する',auto:()=>S.exps.length>=1,why:'目標を先に決めないと、終わってから「よかった気がする」で終わります。',how:'施策タブの「新しい施策を登録する」から、期間・目標・かかる費用を入れます。テンプレートからも作れます。',link:['exp/new','施策を登録する']},
+ {p:'p6',id:'p6-review',pri:'mid',t:'終わった施策を振り返る（同時に試すのは1つまで）',auto:()=>S.exps.some(x=>(x.review||'').trim()),why:'振り返りがない施策は次に活かせません。同時にいくつも始めると、何が効いたのか分からなくなります。',how:'期間が終わると成果が自動で計算されます。目標との差と、次にどうするかを書きます。'},
+ {p:'p6',id:'p6-monthly',pri:'',t:'月に1回、常連と新規の比率と声かけの結果を見直す',why:'今どの段階に力を入れるべきかは、月ごとに変わります。',how:'週間報告の「来店のきっかけ」「声かけ」の行と、お客さんの分析を見て、次の月に力を入れる段階を1つ決めます。',link:['report','今週の報告を見る']},
 ];
 const TM=Object.fromEntries(T.map(t=>[t.id,t]));
-const ORDER=['p1-set','p1-daily','p5-regular','p6-first','p2-20','p4-gbp','p4-review','p5-line','p5-ask','p4-photo','p3-sheet','p1-fl','p6-review','p1-weak','p5-sleep','p2-core','p3-cand','p5-card','p4-kenjin','p4-event','p5-msg'];
+/* 統合した旧項目：旧項目が完了なら新項目も完了 */
+const ALIAS={'p5-line':['p5-ask'],'p3-vote':['p3-sheet','p3-cand'],'p2-core':['p2-words'],'p6-review':['p6-one'],'p5-msg':['p5-kpi']};
+/* 推奨の順番：段階の順に、最優先→優先→その他の3巡。常連と新規の比率で③と④の順を入れ替える */
+function repeatFirst(){const c=S.custs.filter(c=>custVisits(c).length>=1);if(c.length<10)return false;return c.filter(c=>custVisits(c).length>=2).length/c.length<.3;}
+function stageOrder(){const st=P.slice().sort((a,b)=>a.n-b.n).map(p=>p.id);if(repeatFirst()){const i=st.indexOf('p4'),j=st.indexOf('p7');[st[i],st[j]]=[st[j],st[i]];}return st;}
+function orderedTodos(){const st=stageOrder(),out=[];['hot','mid',''].forEach(pr=>st.forEach(pid=>T.filter(t=>t.p===pid&&t.pri===pr).forEach(t=>out.push(t.id))));return out;}
 const isAuto=t=>!!(t.auto&&t.auto());
-const isDone=t=>!!S.todo[t.id]||isAuto(t);
+const isDone=t=>!!S.todo[t.id]||(ALIAS[t.id]||[]).some(k=>S.todo[k])||isAuto(t);
 const pillarProg=pid=>{const a=T.filter(t=>t.p===pid);return{done:a.filter(isDone).length,all:a.length};};
-function nextActions(n){const seq=[...ORDER,...T.map(t=>t.id).filter(id=>!ORDER.includes(id))];return seq.map(id=>TM[id]).filter(t=>!isDone(t)).slice(0,n);}
+function nextActions(n){return orderedTodos().map(id=>TM[id]).filter(t=>!isDone(t)).slice(0,n);}
 
 /* ============ お客様の集計 ============ */
 const custTalks=c=>S.talks.filter(t=>t.custId===c.id);
@@ -518,6 +549,7 @@ document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#/"]');
 function render(){
   const app=$('#app');let html='';
   try{
+    if(R[0]==='p'&&R[1]==='p2')R[1]='p3';
     if(R[0]==='p'&&PM[R[1]])html=vPillar(R[1],R[2],R[3]);
     else if(R[0]==='entry')html=vEntry(R[1],R[2],R[3]);
     else if(R[0]==='cust')html=vCust(R[1],R[2]);
@@ -565,8 +597,8 @@ function vHome(){
     <a class="stat" href="#/cust/ana"><span>会話メモ</span><b>${S.talks.length}組</b><em class="muted">この7日で${weekTalks}組</em></a>
     <a class="stat" href="#/cust"><span>お客様台帳</span><b>${S.custs.length}人</b><em class="${sleep?'down':'muted'}">${sleep?`しばらく来ていない常連 ${sleep}人`:'名刺・常連さんを登録'}</em></a>
     <a class="stat" href="#/p/p6/list"><span>施策</span><b>${running}件実施中</b><em class="${waiting?'down':'muted'}">${waiting?`振り返り待ち${waiting}件`:`登録${S.exps.length}件`}</em></a></div>
-  <h2 class="sec-h">6つの取り組み<small>完了した推奨案の数</small></h2>
-  <div class="plist">${P.map(p=>{const g=pillarProg(p.id),r=Math.round(g.done/g.all*100),nxt=T.find(t=>t.p===p.id&&!isDone(t));
+  <h2 class="sec-h">7つの段階<small>完了した推奨案の数</small></h2>
+  <div class="plist">${P.slice().sort((a,b)=>stageOrder().indexOf(a.id)-stageOrder().indexOf(b.id)).map(p=>{const g=pillarProg(p.id),r=Math.round(g.done/g.all*100),nxt=T.find(t=>t.p===p.id&&!isDone(t));
     return `<a class="prow" href="#/p/${p.id}/${p.tabs[0][0]}"><span class="n">${p.n}</span><span><div class="t">${p.name}</div><div class="s">${nxt?'次：'+esc(nxt.t):'すべて完了'}</div></span><span class="ring" style="--p:${r}" data-v="${g.done}/${g.all}" aria-label="${g.all}件中${g.done}件完了"></span></a>`;}).join('')}</div>
   ${nx.length>1?`<h2 class="sec-h">その次にやること<small>今回の推奨順</small></h2><ol class="queue">${nx.slice(1).map((t,i)=>`<li><a href="#/p/${t.p}/todo/${t.id}"><span class="o">${i+2}</span><span>${esc(t.t)}</span><span class="p">${PM[t.p].n}. ${PM[t.p].name}</span></a></li>`).join('')}</ol>`:''}`;
 }
@@ -653,7 +685,7 @@ function vHelp(){const a=esc(advisor());
 
 /* ============ 柱ページ ============ */
 function vPillar(pid,tab,focus){const p=PM[pid];if(!p.tabs.some(t=>t[0]===tab))tab=p.tabs[0][0];const g=pillarProg(pid);
-  const V={p1:{todo:vTodo,month:vMonth,week:vWeek,fl:vFL,data:vData},p2:{todo:vTodo,talk:vTalkList,ana:vTalkAna},p3:{todo:vTodo,sheet:vSheet},p4:{todo:vTodo,res:vChannelRes},p5:{todo:vTodo,tpl:vTpl,kpi:vRepeatKpi},p6:{list:vExpList,todo:vTodo}};
+  const V={p1:{todo:vTodo,month:vMonth,week:vWeek,fl:vFL,data:vData},p3:{todo:vTodo,sheet:vSheet,talk:vTalkList,ana:vTalkAna},p4:{todo:vTodo,res:vChannelRes},p7:{todo:vTodo,tpl:vTpl},p5:{todo:vTodo,tpl:vTpl,kpi:vRepeatKpi},p8:{todo:vTodo},p6:{list:vExpList,todo:vTodo}};
   return `<a class="back" href="#/home">‹ ホーム</a>${demoBar()}<div class="phead"><span class="pn">${p.n}</span><h1>${p.name}</h1><p>${p.lead}</p>
    <div class="pbar"><span class="track"><i id="pbar-i" style="width:${g.done/g.all*100}%"></i></span><span id="pbar-t">推奨案 ${g.done}/${g.all}</span></div></div>
   <div class="tabs" role="tablist">${p.tabs.map(([k,l])=>`<a role="tab" aria-selected="${k===tab}" class="${k===tab?'on':''}" href="#/p/${pid}/${k}">${l}</a>`).join('')}</div>${V[pid][tab](pid,focus)}`;}
@@ -663,10 +695,10 @@ function todoItem(t){const d=isDone(t),a=isAuto(t);
     <div class="body"><p><span class="lb">なぜ</span>${esc(t.why)}</p><p><span class="lb">やり方</span>${esc(t.how)}</p>${t.link?`<a class="lnk" href="#/${t.link[0]}">${t.link[1]}</a>`:''}</div></details></div>`;}
 function vTodo(pid){const items=T.filter(t=>t.p===pid);
   if(pid==='p4'){const groups=[...new Set(items.map(t=>t.g))];
-    const gd={'Googleマップ':'最優先。無料で、検索した人に一番最初に見られる入口です。','Instagram':'Googleマップで見つけた人が、雰囲気を確かめに来る場所です。','宮崎つながり':'宮崎出身者・宮崎好きに直接届く、この店ならではの入口です。','イベント':'新しいお客さんと出会う場。本店への送客までを設計します。','グルメサイト':'お金がかかる入口。効果を測ってから判断します。'};
+    const gd={'店頭':'通りがかりの人が「入ってみよう」と思えるかどうか。費用は小さく、毎日効きます。','宴会・団体':'1回で売上が大きく動く入口。幹事の手間を減らすほど選ばれます。','Googleマップ':'最優先。無料で、検索した人に一番最初に見られる入口です。','Instagram':'Googleマップで見つけた人が、雰囲気を確かめに来る場所です。','宮崎つながり':'宮崎出身者・宮崎好きに直接届く、この店ならではの入口です。','イベント':'新しいお客さんと出会う場。本店への送客までを設計します。','グルメサイト':'お金がかかる入口。効果を測ってから判断します。'};
     return `<div class="panel">${groups.map(gn=>`<h3 class="group-h">${gn}</h3><p class="group-d">${gd[gn]||''}</p>${items.filter(t=>t.g===gn).map(todoItem).join('')}`).join('')}</div>`;}
   let extra='';
-  if(pid==='p2')extra=`<div class="panel"><h3>会話での聞き方の例</h3><ul class="insights">${CORE.concat('purpose').map(k=>`<li><b>${Q[k].l}</b>　${esc(Q[k].ask)}</li>`).join('')}</ul><p class="note">アンケート用紙より、会話の流れで聞くほうが本音が出ます。全部聞く必要はありません。</p></div>`;
+  if(pid==='p3')extra=`<div class="panel"><h3>会話での聞き方の例</h3><ul class="insights">${CORE.concat('purpose').map(k=>`<li><b>${Q[k].l}</b>　${esc(Q[k].ask)}</li>`).join('')}</ul><p class="note">アンケート用紙より、会話の流れで聞くほうが本音が出ます。全部聞く必要はありません。</p></div>`;
   return `<div class="panel">${items.map(todoItem).join('')}</div>${extra}`;}
 
 /* ---- ① 数字 ---- */
@@ -676,7 +708,10 @@ const emptyBox=(msg,href,label)=>`<div class="panel empty"><p>${msg}</p>${href?`
 function vMonth(){const m=viewMonth,es=monthEntries(m),st=stats(es),pv=stats(monthEntries(prevYm(m))),s=S.settings;
   if(!es.length)return monthPicker('mp',m)+emptyBox(`${ymLabel(m)}の売上の記録はまだありません。毎日の売上と客数を入れると、ここに分析が出ます。`,'#/entry/sales','今日の売上を記録する');
   const biz=+s.bizDays||26,target=+s.target||0,forecast=st.avgSales*biz,prog=target?st.sales/target:null,remain=Math.max(biz-st.days,0),need=remain&&target>st.sales?(target-st.sales)/remain:null,turn=s.seats&&st.avgGuests!=null?st.avgGuests/s.seats:null;
-  return monthPicker('mp',m)+`<div class="panel"><h3>目標の進み具合<small>${st.days}/${biz}営業日</small></h3><div class="big">${yen(st.sales)}</div><div class="meter"><i style="width:${Math.min((prog||0)*100,100)}%"></i></div>
+  const fx=+s.fixed||0,fm=Object.values(S.months).filter(x=>x&&x.food!=null&&x.sales),vr=fm.length?Math.min(.8,fm.reduce((a,x)=>a+x.food/x.sales,0)/fm.length):.33,bep=fx?fx/(1-vr):0;
+  const bepBox=fx?`<div class="panel"><h3>損益分岐点<small>原価率${pct(vr)}${fm.length?'（記録から）':'（目安）'}で計算</small></h3><div class="big">${yen(bep)}<small style="font-size:13px;font-weight:400">／月</small></div>
+    <p class="note" style="margin:0">1日あたり ${yen(bep/biz)}${st.ticket?`、客単価${yen(st.ticket)}なら<b style="color:var(--ink)">1日${Math.ceil(bep/biz/st.ticket)}人</b>で黒字です`:''}。今月の日販は ${yen(st.avgSales)}${st.avgSales>=bep/biz?'で上回っています。':'で届いていません。'}</p></div>`:'';
+  return monthPicker('mp',m)+bepBox+`<div class="panel"><h3>目標の進み具合<small>${st.days}/${biz}営業日</small></h3><div class="big">${yen(st.sales)}</div><div class="meter"><i style="width:${Math.min((prog||0)*100,100)}%"></i></div>
     <div class="note" style="margin:0">${target?`目標 ${yen(target)}（達成率 ${pct(prog,1)}）`:'目標は未設定です（<a href="#/settings">設定で決める</a>）'}／着地予測 <b style="color:var(--ink)">${yen(forecast)}</b>${target?`（目標比 ${pct(forecast/target)}）`:''}</div></div>
   <div class="panel"><h3>売上の分解<small>1日平均</small></h3><div class="kpis">
     <div class="kv"><span>日販</span><b>${yen(st.avgSales)}</b>${delta(st.avgSales,pv.avgSales)}</div><div class="kv"><span>客数</span><b>${num(st.avgGuests,1)}人</b>${delta(st.avgGuests,pv.avgGuests)}</div>
@@ -687,7 +722,7 @@ function monthInsights(es,st,pv,o){const out=[],s=S.settings;
   if(o.target){if(o.forecast>=o.target)out.push(`このペースなら目標は<b>達成見込み</b>です（着地予測 ${yen(o.forecast)}）。`);else if(o.need)out.push(`目標まで、残りの営業日で<b>日販 ${yen(o.need)}</b>が必要です。今の日販より<b>1日 ${yen(o.need-st.avgSales)}</b>多く売る計算です。`);}
   if(pv.days&&st.ticket&&pv.ticket&&st.avgGuests&&pv.avgGuests){const gr=st.avgGuests/pv.avgGuests-1,tr=st.ticket/pv.ticket-1,sr=st.avgSales/pv.avgSales-1;out.push(`日販は前月比 ${signPct(sr)}。主な要因は<b>${Math.abs(gr)>=Math.abs(tr)?'客数':'客単価'}</b>です（客数 ${signPct(gr)}、客単価 ${signPct(tr)}）。`);}
   if(s.ticket&&st.ticket){const g=st.ticket-s.ticket;out.push(g>=0?`客単価は目標を${yen(g)}上回っています。`:`客単価が目標より${yen(-g)}低いです。看板の一品やおかわりの一声で、1人あと${yen(-g)}を狙います。`);}
-  if(o.turn!=null)out.push(o.turn<1?`席回転率は${num(o.turn,2)}回で、席が埋まりきっていません。<b>客数を増やす施策</b>（④集客）が先です。`:`席回転率は${num(o.turn,2)}回で、席はよく埋まっています。次の伸びしろは<b>客単価</b>と、空いている時間帯の活用です。`);
+  if(o.turn!=null)out.push(o.turn<1?`席回転率は${num(o.turn,2)}回で、席が埋まりきっていません。<b>客数を増やす施策</b>（③集客）が先です。`:`席回転率は${num(o.turn,2)}回で、席はよく埋まっています。次の伸びしろは<b>客単価</b>と、空いている時間帯の活用です。`);
   const by={};es.forEach(e=>{const w=toDate(e.date).getDay();(by[w]=by[w]||[]).push(e.sales);});const av=Object.keys(by).map(w=>({w:+w,v:by[w].reduce((a,b)=>a+b,0)/by[w].length})).sort((a,b)=>b.v-a.v);
   if(av.length>=3)out.push(`一番強いのは${WD[av[0].w]}曜（平均${man(av[0].v)}）、一番弱いのは<b>${WD[av[av.length-1].w]}曜</b>（平均${man(av[av.length-1].v)}）です。`);
   const md=es.filter(e=>e.memo);if(md.length){const top=md.slice().sort((a,b)=>b.sales-a.sales)[0];out.push(`メモのある日で売上が最も高かったのは${toDate(top.date).getDate()}日（${esc(top.memo.slice(0,24))}）の${yen(top.sales)}です。効いたことは再現します。`);}
@@ -700,9 +735,9 @@ function vWeek(){const all=entries();if(!all.length)return emptyBox('まだ売�
   <div class="panel"><h3>曜日別の内訳</h3><div class="tw"><table><thead><tr><th>曜日</th><th>日数</th><th>平均売上</th><th>客数</th><th>客単価</th><th>全体比</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${WD[r.w]}</td><td>${r.n}</td><td>${yen(r.avgSales)}</td><td>${num(r.avgGuests,1)}</td><td>${yen(r.ticket)}</td><td class="${r.n?(r.avgSales>=tot?'up':'down'):''}">${r.n?pct(r.avgSales/tot):'―'}</td></tr>`).join('')}</tbody></table></div></div>`;
   const wx=['晴','曇','雨','雪'].map(w=>{const g=es.filter(e=>e.weather===w);return Object.assign({w,n:g.length},stats(g));}).filter(r=>r.n);
-  if(wx.length){const mx=Math.max(...wx.map(x=>x.avgSales));h+=`<div class="panel"><h3>天気別</h3><div class="dist">${wx.map(r=>`<div class="r ${r.avgSales===mx?'top':''}"><span>${r.w}（${r.n}日）</span><span class="bar"><i style="width:${r.avgSales/mx*100}%"></i></span><span class="v">${pct(r.avgSales/tot)}</span></div>`).join('')}</div><p class="note">右の数字は全体平均に対する比率です。雨の日が弱いなら、雨の日限定のLINE配信（⑤）が効きます。</p></div>`;}
+  if(wx.length){const mx=Math.max(...wx.map(x=>x.avgSales));h+=`<div class="panel"><h3>天気別</h3><div class="dist">${wx.map(r=>`<div class="r ${r.avgSales===mx?'top':''}"><span>${r.w}（${r.n}日）</span><span class="bar"><i style="width:${r.avgSales/mx*100}%"></i></span><span class="v">${pct(r.avgSales/tot)}</span></div>`).join('')}</div><p class="note">右の数字は全体平均に対する比率です。雨の日が弱いなら、雨の日限定のLINE配信（⑤常連にする）が効きます。</p></div>`;}
   if(has.length>=3){const s=has.slice().sort((a,b)=>b.avgSales-a.avgSales),worst=s[s.length-1];
-    h+=`<div class="panel"><h3>打ち手のヒント</h3><ul class="insights"><li><b>${WD[worst.w]}曜</b>は全体平均の${pct(worst.avgSales/tot)}です。平均並みに上げると、月に約<b>${man((tot-worst.avgSales)*4.3)}</b>の増収になります。</li><li>${WD[worst.w]}曜限定の企画（県人会の集まり、宮崎の日、団体割引など）を⑥で施策として試します。</li></ul><a class="btn ghost small" href="#/exp/new/weekday">${WD[worst.w]}曜の企画を施策に登録する</a></div>`;}
+    h+=`<div class="panel"><h3>打ち手のヒント</h3><ul class="insights"><li><b>${WD[worst.w]}曜</b>は全体平均の${pct(worst.avgSales/tot)}です。平均並みに上げると、月に約<b>${man((tot-worst.avgSales)*4.3)}</b>の増収になります。</li><li>${WD[worst.w]}曜限定の企画（県人会の集まり、宮崎の日、団体割引など）を⑦で施策として試します。</li></ul><a class="btn ghost small" href="#/exp/new/weekday">${WD[worst.w]}曜の企画を施策に登録する</a></div>`;}
   return h;}
 function vFL(){const m=flMonth,rec=S.months[m]||{},daysSales=sum(monthEntries(m),e=>e.sales),sales=rec.sales!=null?rec.sales:(daysSales||null);
   const fr=sales&&rec.food!=null?rec.food/sales:null,lr=sales&&rec.labor!=null?rec.labor/sales:null,fl=fr!=null&&lr!=null?fr+lr:null,cls=(v,hi)=>v==null?'muted':v<=hi?'up':'down';
@@ -753,7 +788,7 @@ function vTalkAna(){const all=S.talks.filter(inRange),n=all.length;
   if(ts)ins.push(`最も多い客層は<b>${ts.k}</b>（${pct(ts.v/seg.n)}）です。`);if(tc)ins.push(`知ったきっかけで最も多いのは<b>${tc.k}</b>（${pct(tc.v/ch.n)}）です。`);
   const reg=Q.seg.opts.map(s=>{const g=all.filter(t=>t.seg===s&&t.vis);return{s,n:g.length,r:g.length?g.filter(t=>t.vis==='5回以上').length/g.length:0};}).filter(x=>x.n>=3).sort((a,b)=>b.r-a.r)[0];
   if(reg&&reg.r>0)ins.push(`常連（5回以上）の割合が最も高いのは<b>${reg.s}</b>（${pct(reg.r)}）です。この客層が店の土台です。`);
-  const rr=repeatRate(all);if(rr!=null)ins.push(rr<.4?`再来店の割合は${pct(rr)}と低めです。⑤リピートの仕組みが最優先です。`:`再来店の割合は${pct(rr)}です。常連に支えられている分、新しい入口（④）を増やす余地があります。`);
+  const rr=repeatRate(all);if(rr!=null)ins.push(rr<.4?`再来店の割合は${pct(rr)}と低めです。④「2回目の壁」が最優先です。`:`再来店の割合は${pct(rr)}です。常連に支えられている分、新しい入口（③）を増やす余地があります。`);
   const w=countBy('wants',all),wTop=w.rows.filter(r=>r.k!=='特になし'&&r.v).sort((a,b)=>b.v-a.v)[0];if(wTop&&w.n&&wTop.v/w.n>=.15)ins.push(`要望で多いのは<b>${wTop.k}</b>（要望を聞けた組の${pct(wTop.v/w.n)}）です。すぐ直せるものから手を打ちます。`);
   const sat=countBy('sat',all),low=sat.rows.find(r=>r.k==='いまひとつ');if(sat.n>=5&&low.v/sat.n>=.15)ins.push(`「いまひとつ」が${pct(low.v/sat.n)}あります。その組の要望と一言を確認します。`);
   if(n<20)ins.push(`まだ${n}組分です。あと${20-n}組で傾向がはっきりします。`);
@@ -764,7 +799,7 @@ function vTalkAna(){const all=S.talks.filter(inRange),n=all.length;
   return rangeSel+`<div class="panel"><h3>分かったこと<small>${n}組分</small></h3><ul class="insights">${ins.map(t=>`<li>${t}</li>`).join('')}</ul></div>
   <div class="panel"><h3>客層ごとの特徴</h3>${personas}<p class="note">売上を支える客層に合わせて、メニューの推し方、LINEの話題、集客の入口を変えます。</p></div>
   ${block('seg','宮崎とのご縁',true)}${block('from','宮崎のどちらから')}${block('vis','来店回数',true)}${block('ch','知ったきっかけ')}${block('purpose','誰と・どんな集まり')}${block('age','年代')}${block('likes','喜んでいたもの')}${block('topics','盛り上がった話題')}${block('wants','要望・気になる点')}${block('sat','満足度',true)}
-  ${quotes.length?`<div class="panel"><h3>お客さんの言葉<small>③の一言づくりのヒントになります</small></h3><ul class="insights">${quotes.map(q=>`<li>「${esc(q.note)}」<span class="muted">（${esc(q.seg||'')}${q.from?'・'+esc(q.from):''}）</span></li>`).join('')}</ul></div>`:''}`;}
+  ${quotes.length?`<div class="panel"><h3>お客さんの言葉<small>②の一言づくりのヒントになります</small></h3><ul class="insights">${quotes.map(q=>`<li>「${esc(q.note)}」<span class="muted">（${esc(q.seg||'')}${q.from?'・'+esc(q.from):''}）</span></li>`).join('')}</ul></div>`:''}`;}
 
 /* ============ お客様台帳 ============ */
 let custQuery='';
@@ -891,7 +926,7 @@ function vExpForm(id,tplKey){const isNew=id==='new',x=isNew?Object.assign({id:''
   <div class="panel" data-form="exp" id="expform" data-id="${x.id}"><div class="field"><label for="x-name">施策名</label><input id="x-name" value="${esc(x.name)}" placeholder="例：宮崎ゆかりナイト 11月"></div>
     <div class="field"><label for="x-hypo">仮説<span class="hint">〜すれば、〜が増える</span></label><textarea id="x-hypo">${esc(x.hypo)}</textarea></div>
     <div class="grid2"><div class="field"><label for="x-start">開始日</label><input type="date" id="x-start" value="${x.start||''}"></div><div class="field"><label for="x-end">終了日</label><input type="date" id="x-end" value="${x.end||''}"></div></div>
-    <div class="grid2"><div class="field"><label for="x-pillar">取り組み</label><select id="x-pillar">${P.slice(0,5).map(p=>`<option value="${p.id}" ${p.id===x.pillar?'selected':''}>${p.n}. ${p.name}</option>`).join('')}</select></div><div class="field"><label for="x-metric">何で測るか</label><select id="x-metric">${Object.entries(MET).map(([k,v])=>`<option value="${k}" ${k===m?'selected':''}>${v[0]}</option>`).join('')}</select></div></div>
+    <div class="grid2"><div class="field"><label for="x-pillar">取り組み</label><select id="x-pillar">${P.filter(p=>p.id!=='p6').map(p=>`<option value="${p.id}" ${p.id===x.pillar?'selected':''}>${p.n}. ${p.name}</option>`).join('')}</select></div><div class="field"><label for="x-metric">何で測るか</label><select id="x-metric">${Object.entries(MET).map(([k,v])=>`<option value="${k}" ${k===m?'selected':''}>${v[0]}</option>`).join('')}</select></div></div>
     <div class="grid2"><div class="field"><label for="x-goal">目標値<span class="hint">期間合計</span></label><input id="x-goal" type="number" inputmode="numeric" value="${x.goal??''}" placeholder="例：300000"></div><div class="field"><label for="x-cost">費用（円）</label><input id="x-cost" type="number" inputmode="numeric" value="${x.cost??''}" placeholder="例：15000"></div></div>
     <div class="field"><label for="x-manual">実績の手入力<span class="hint">「その他」で測る場合（LINE登録数など）</span></label><input id="x-manual" type="number" inputmode="numeric" value="${x.manual??''}"></div>
     <div class="field"><label for="x-review">振り返り<span class="hint">目標との差、次にどうするか</span></label><textarea id="x-review" placeholder="例：参加者は目標を超えたが、本店への再来店は2組だけ。次回は特典カードを渡す">${esc(x.review||'')}</textarea></div>
@@ -947,6 +982,7 @@ function vSettings(){const s=S.settings,bytes=(()=>{try{return (localStorage.get
     <div class="field"><label for="s-name">店名</label><input id="s-name" value="${esc(s.name)}" placeholder="例：みやこんじょ"></div>
     <div class="grid2"><div class="field"><label for="s-seats">席数</label><input id="s-seats" type="number" inputmode="numeric" value="${s.seats??''}"></div><div class="field"><label for="s-biz">月の営業日数</label><input id="s-biz" type="number" inputmode="numeric" value="${s.bizDays??''}"></div></div>
     <div class="grid2"><div class="field"><label for="s-target">月の売上目標（円）</label><input id="s-target" type="number" inputmode="numeric" value="${s.target??''}"></div><div class="field"><label for="s-ticket">目標客単価（円）</label><input id="s-ticket" type="number" inputmode="numeric" value="${s.ticket??''}" placeholder="任意"></div></div>
+    <div class="field"><label for="s-fixed">月の固定費（円）<span class="hint">家賃・人件費・光熱費など。損益分岐点の計算に使います</span></label><input id="s-fixed" type="number" inputmode="numeric" value="${s.fixed??''}"></div>
     <div class="field"><label for="s-owner">LINE文案に入れるお名前<span class="hint">例：りゅう</span></label><input id="s-owner" value="${esc(s.owner||'')}" autocomplete="off"></div>
     <div class="field"><label for="s-advisor">週間報告を送る相手</label><input id="s-advisor" value="${esc(s.advisor||'周平さん')}"></div></div>
   <div class="panel"><h3>データの保存先</h3><p class="note" style="margin-top:0"><b style="color:var(--ink)">記録は、開いているアプリ（ブラウザ）ごとに別々に保存されます。</b>LINEの中、Safari、Chromeで開くと、それぞれ別の記録になります。いつも同じ場所から開けるよう、SafariやChromeで開いてホーム画面に追加し、そのアイコンから開いてください。<br><br>記録はすべてこの端末の中だけに自動で保存されます。インターネットにはどこにも送られません。お客様の名刺写真もこの端末の中です。<br>
@@ -976,7 +1012,7 @@ function chartBars(labels,vals,fmt){const W=640,H=200,L=10,R2=10,T2=24,B=26,n=la
 /* ============ 描画後 ============ */
 async function after(){
   if(R[0]==='p'&&R[2]==='todo'&&R[3]){const el=document.getElementById('todo-'+R[3]);if(el){el.querySelector('details').open=true;el.classList.add('flash');setTimeout(()=>el.scrollIntoView({block:'center',behavior:'smooth'}),60);}}
-  if(R[0]==='p'&&R[1]==='p3'&&R[2]==='sheet')updatePreview();
+  if(R[0]==='p'&&R[2]==='sheet')updatePreview();
   if(R[0]==='cust'&&!R[1]||R[1]==='f')filterCustList();
   for(const el of document.querySelectorAll('[data-photo]')){const src=await idb.get(el.dataset.photo);if(src&&el.isConnected)el.innerHTML=`<img alt="" src="${src}">`;}
   for(const el of document.querySelectorAll('[data-photo-full]')){const src=await idb.get(el.dataset.photoFull);if(src&&el.isConnected)el.src=src;}}
@@ -1016,7 +1052,7 @@ const SAVERS={
     setSt('cust-st','自動で保存しました。');},
   fl(){const m=flMonth;putMonth(m,Object.assign({},S.months[m],{sales:nn(val('fl-sales')),food:nn(val('fl-food')),labor:nn(val('fl-labor'))}));},
   line(){const m=val('km')||kpiMonth;putMonth(m,Object.assign({},S.months[m],{line:nn(val('k-line'))}));},
-  set(){S.settings=Object.assign({},S.settings,{owner:val('s-owner').trim(),name:val('s-name').trim(),seats:nn(val('s-seats')),bizDays:nn(val('s-biz'))||26,target:nn(val('s-target')),ticket:nn(val('s-ticket')),advisor:val('s-advisor').trim()||'周平さん'});saveAll();},
+  set(){S.settings=Object.assign({},S.settings,{fixed:nn(val('s-fixed')),owner:val('s-owner').trim(),name:val('s-name').trim(),seats:nn(val('s-seats')),bizDays:nn(val('s-biz'))||26,target:nn(val('s-target')),ticket:nn(val('s-ticket')),advisor:val('s-advisor').trim()||'周平さん'});saveAll();},
   exp(){const form=$('#expform');if(!form)return;const name=val('x-name').trim();let id=form.dataset.id;
     if(!name){setSt('exp-st',id?'施策名が空欄のため、前の名前のまま保存されています。':'施策名を入れると自動で保存されます。');return;}
     const s=val('x-start'),e=val('x-end');if(s&&e&&e<s){setSt('exp-st','終了日が開始日より前になっています。');return;}
@@ -1176,6 +1212,7 @@ try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().
 const h=(location.hash||'').replace(/^#\/?/,'');if(h)R=h.split('/').filter(Boolean);
 render();
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+if(/[?&]t=1/.test(location.search))window.__t={get S(){return S;},T,TM,P,PM,isDone,nextActions,repeatFirst,stageOrder,go,saveAll,exitDemo,today,iso};
 })();
 </script>
 </body>
