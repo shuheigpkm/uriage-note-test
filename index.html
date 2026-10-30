@@ -350,12 +350,13 @@ const upsert=(arr,x)=>{const i=S[arr].findIndex(e=>e.id===x.id);if(i>=0)S[arr][i
 const remove=(arr,id)=>{S[arr]=S[arr].filter(e=>e.id!==id);saveAll();};
 const putMonth=(m,o)=>{S.months[m]=o;saveAll();};
 
-/* 名刺写真は端末内のデータベースに保存 */
+/* 名刺写真は端末内のデータベースに保存（デモ中はメモリにだけ置き、保存しない） */
+const DEMO_PHOTOS={};
 const idb={_p:null,open(){if(!this._p)this._p=new Promise(res=>{try{if(!window.indexedDB)return res(null);const r=indexedDB.open('stg_growth-note',1);
     r.onupgradeneeded=()=>r.result.createObjectStore('photos');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null);}catch(e){res(null);}});return this._p;},
   async tx(mode,fn){const d=await this.open();if(!d)return null;return new Promise(res=>{try{const t=d.transaction('photos',mode),st=t.objectStore('photos'),rq=fn(st);
     t.oncomplete=()=>res(rq&&rq.result!==undefined?rq.result:true);t.onerror=()=>res(null);}catch(e){res(null);}});},
-  get(k){return this.tx('readonly',s=>s.get(k));},put(k,v){return this.tx('readwrite',s=>s.put(v,k));},del(k){return this.tx('readwrite',s=>s.delete(k));},
+  get(k){if(mode==='demo'&&DEMO_PHOTOS[k])return Promise.resolve(DEMO_PHOTOS[k]);return this.tx('readonly',s=>s.get(k));},put(k,v){return this.tx('readwrite',s=>s.put(v,k));},del(k){return this.tx('readwrite',s=>s.delete(k));},
   async all(){const keys=await this.tx('readonly',s=>s.getAllKeys())||[];const out={};for(const k of keys)out[k]=await this.get(k);return out;}};
 function compressImage(file){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);
   img.onload=()=>{const m=900,sc=Math.min(1,m/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
@@ -992,7 +993,7 @@ document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-a
     visit(){flushForms();const c=S.custs.find(x=>x.id===el.dataset.id);if(!c)return;const v=new Set(c.visits||[]);if(v.has(today())){v.delete(today());toast('今日の来店を取り消しました');}else{v.add(today());toast('今日の来店を記録しました');}
       upsert('custs',Object.assign({},c,{visits:[...v].sort()}));render();},
     unvisit(){const c=S.custs.find(x=>x.id===el.dataset.id);if(!c)return;upsert('custs',Object.assign({},c,{visits:(c.visits||[]).filter(d=>d!==el.dataset.date)}));render();},
-    cardSnap(){flushForms();if(mode==='demo')return toast('デモ中は写真を保存できません。デモを終えてから試してください');photoTarget='__new__';const i=$('#photo');i.setAttribute('capture','environment');i.click();},
+    cardSnap(){flushForms();photoTarget='__new__';const i=$('#photo');i.setAttribute('capture','environment');i.click();},
     photo(){flushForms();$('#photo').removeAttribute('capture');const id=$('#custform')&&$('#custform').dataset.id;if(!id)return toast('先にお名前を入れてください');photoTarget=id;$('#photo').click();},
     async delPhoto(){if(!await ask('この写真を削除します。よろしいですか？','削除する',true))return;await idb.del(el.dataset.id);const c=S.custs.find(x=>x.id===el.dataset.id);if(c)upsert('custs',Object.assign({},c,{hasPhoto:false}));toast('写真を削除しました');render();},
     async delCust(){const c=S.custs.find(x=>x.id===el.dataset.id);if(!await ask(`${esc(c?c.name:'')}さんを台帳から削除します。名刺写真も消えます。会話メモは残ります。`,'削除する',true))return;
@@ -1032,12 +1033,12 @@ const csvOut=(name,rows)=>{download(name,'﻿'+rows.map(r=>r.map(csvCell).join('
 /* ---- 名刺写真 ---- */
 let photoTarget=null;
 $('#photo').addEventListener('change',async ev=>{const f=ev.target.files[0];ev.target.value='';if(!f||!photoTarget)return;
-  if(mode==='demo'){toast('デモ中は写真を保存できません');return;}
+  const putPhoto=async(id,data)=>{if(mode==='demo'){DEMO_PHOTOS[id]=data;return true;}return idb.put(id,data);};
   if(photoTarget==='__new__'){photoTarget=null;try{const data=await compressImage(f),id=uid(),d=today();
-      const ok=await idb.put(id,data);if(!ok)throw new Error('この端末では写真を保存できませんでした');
+      const ok=await putPhoto(id,data);if(!ok)throw new Error('この端末では写真を保存できませんでした');
       upsert('custs',{id,name:`名刺の方（${+d.slice(5,7)}/${+d.slice(8)}）`,needName:true,hasPhoto:true,metAt:d,visits:[d],ctag:[],likes:[],created:Date.now()});
-      toast('名刺を保存しました');go('cust/quick/'+id);}catch(e){toast(e.message);}return;}
-  try{const data=await compressImage(f);const ok=await idb.put(photoTarget,data);if(!ok)throw new Error('この端末では写真を保存できませんでした');
+      toast(mode==='demo'?'デモなので、この名刺は保存されません':'名刺を保存しました');go('cust/quick/'+id);}catch(e){toast(e.message);}return;}
+  try{const data=await compressImage(f);const ok=await putPhoto(photoTarget,data);if(!ok)throw new Error('この端末では写真を保存できませんでした');
     const c=S.custs.find(x=>x.id===photoTarget);if(c)upsert('custs',Object.assign({},c,{hasPhoto:true}));toast('写真を保存しました');go('cust/'+photoTarget);}
   catch(e){toast(e.message);}});
 
