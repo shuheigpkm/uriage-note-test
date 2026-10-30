@@ -301,6 +301,9 @@ nav.bn a.add .ic svg{width:22px;height:22px}
 .tc .bits,.tc .w{font-size:12px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .btn.snap{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 12px}
 .qphoto{max-height:220px;object-fit:contain;width:100%;border-radius:10px;margin:0 0 12px;background:var(--paper)}
+.closerow{border-left:4px solid var(--sun)}
+.chips .chip{font:inherit;padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:14px;cursor:pointer;font-weight:500;line-height:1.3}
+.chips .chip.on{background:var(--sea);border-color:var(--sea);color:var(--on-sea);font-weight:700}
 </style>
 </head>
 <body>
@@ -370,6 +373,9 @@ const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const toDate=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
 const ymOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1);
 const today=()=>iso(new Date());
+const bizDate=()=>{const d=new Date();if(d.getHours()<5)d.setDate(d.getDate()-1);return iso(d);};
+const VIA=['LINEを見て','イベント','姉妹店から','紹介','ふらりと'];
+const viaChips=(c,date)=>`<div class="qblock" style="margin-top:4px"><span class="flabel">今日来たきっかけ<em>1タップ</em></span><div class="chips">${VIA.map(v=>`<button type="button" class="chip ${(c.via||{})[date]===v?'on':''}" data-act="via" data-id="${c.id}" data-date="${date}" data-v="${v}" aria-pressed="${(c.via||{})[date]===v}">${v}</button>`).join('')}</div></div>`;
 const daysAgo=s=>s?Math.round((toDate(today())-toDate(s))/864e5):null;
 const agoLabel=s=>{const n=daysAgo(s);return n==null?'―':n===0?'今日':n===1?'昨日':n<60?`${n}日前`:`${Math.round(n/30)}か月前`;};
 const prevYm=m=>{const[y,mo]=m.split('-').map(Number);return ymOf(new Date(y,mo-2,1));};
@@ -492,6 +498,7 @@ function render(){
     else if(R[0]==='report')html=vReport();
     else if(R[0]==='help')html=vHelp();
     else if(R[0]==='settings')html=vSettings();
+    else if(R[0]==='close')html=vClose();
     else if(R[0]==='exp')html=vExpForm(R[1],R[2]);
     else html=vHome();
   }catch(err){html=`<div class="panel" style="margin-top:16px">表示できませんでした：${esc(err.message)}</div>`;console.error(err);}
@@ -526,7 +533,7 @@ function vHome(){
   (needBackup?`<div class="banner"><span>${pref.lastBackup?'最後のバックアップから1週間以上たちました。':'まだバックアップがありません。'}端末の故障や機種変更に備えて保存しておきましょう。</span><button class="btn small" data-act="backup">保存する</button></div>`:'')+
   (tabWarn?`<div class="banner warn"><span><b>Safariのタブで開いています。</b>iPhoneはしばらく開かないと、ここの記録が消えることがあります。まずバックアップを保存してください。</span><button class="btn small" data-act="backup">保存する</button></div>`:'')+
   (mode!=='demo'&&S.custs.some(c=>c.needName)?`<div class="banner"><span>名刺だけ登録した方が${S.custs.filter(c=>c.needName).length}人います。忘れないうちにお名前を入れておきましょう。</span><a class="btn small" href="#/cust/f/noname">入れる</a></div>`:'')+
-  onboardCard()+todayCards()+hero+reportRow()+`<div class="snap">
+  closeRow()+onboardCard()+todayCards()+hero+reportRow()+`<div class="snap">
     <a class="stat" href="#/p/p1/month"><span>今月の日販</span><b>${st.days?man(st.avgSales):'―'}</b>${st.days?delta(st.avgSales,pv.avgSales):'<em class="muted">記録なし</em>'}</a>
     <a class="stat" href="#/cust/ana"><span>会話メモ</span><b>${S.talks.length}組</b><em class="muted">この7日で${weekTalks}組</em></a>
     <a class="stat" href="#/cust"><span>お客様台帳</span><b>${S.custs.length}人</b><em class="${sleep?'down':'muted'}">${sleep?`しばらく来ていない常連 ${sleep}人`:'名刺・常連さんを登録'}</em></a>
@@ -569,6 +576,8 @@ function onboardCard(){if(mode==='demo'||pref.onboardDone)return'';
   ${row(s2,2,'店名を入れる','月の目標や席数は、あとからでも大丈夫です。','<a class="btn ghost small" href="#/settings">設定を開く</a>')}
   ${row(s3,3,'常連さんを1人登録してみる','名前と、見た目の特徴を一言。それだけで十分です。','<a class="btn ghost small" href="#/entry/cust">登録する</a>')}
   <div class="onb-foot"><a href="#/help">使い方とよくある質問</a>${all?'<button class="linkbtn" data-act="onbClose">閉じる</button>':''}</div></section>`;}
+function closeRow(){if(mode==='demo')return'';const h=new Date().getHours(),d=bizDate(),e=S.days[d];if(e&&e.sales!=null)return'';if(h>=5&&h<17)return'';
+  return `<a class="reportrow closerow" href="#/close"><span><b>今日の締め（20秒）</b><small>売上・客数・今日のいい話を残す</small></span><span aria-hidden="true">›</span></a>`;}
 function reportRow(){const d=pref.lastReport?Math.floor((Date.now()-pref.lastReport)/864e5):null,due=d==null||d>=7;
   return `<a class="reportrow" href="#/report"><span><b>今週の報告を${esc(advisor())}に送る</b><small>${d==null?'まだ送っていません':d===0?'今日送りました':`${d}日前に送りました`}</small></span>${due?'<span class="tag hot">送る時期です</span>':'<span aria-hidden="true">›</span>'}</a>`;}
 function weekSpan(off){const e=new Date();e.setDate(e.getDate()-off);const s=new Date(e);s.setDate(s.getDate()-6);return[iso(s),iso(e)];}
@@ -587,7 +596,10 @@ function buildReport(note){
   if(tk.length){const g=topOf('seg',tk)[0],c=topOf('ch',tk)[0],w=countBy('wants',tk).rows.filter(r=>r.k!=='特になし'&&r.v).sort((x,y)=>y.v-x.v)[0];
     if(g)L.push(`・多い客層：${g.k}`);if(c)L.push(`・知ったきっかけ：${c.k}が最多`);if(w)L.push(`・要望：${w.k}（${w.v}組）`);
     tk.filter(t=>(t.note||'').trim()).slice(-2).forEach(t=>L.push(`・お客さんの言葉「${t.note}」`));}
+  const vc={};S.custs.forEach(c=>Object.entries(c.via||{}).forEach(([d,v])=>{if(d>=a&&d<=b)vc[v]=(vc[v]||0)+1;}));
+  const vr=Object.entries(vc).sort((x,y)=>y[1]-x[1]);if(vr.length)L.push(`・来店のきっかけ：${vr.map(([k,v])=>`${k}${v}人`).join('、')}`);
   L.push(`・台帳に新しく登録 ${newC}人（合計${S.custs.length}人）`);if(sleep)L.push(`・しばらく来ていない常連 ${sleep}人`);
+  const goods=es.filter(e=>(e.good||'').trim());if(goods.length){L.push('','■今週のいい話');goods.forEach(e=>L.push(`・${md(e.date)} ${e.good}`));}
   if(run.length||wait.length){L.push('','■施策');run.forEach(n=>L.push(`・実施中：${n}`));wait.forEach(n=>L.push(`・振り返り待ち：${n}`));}
   const nx=nextActions(1)[0];if(nx)L.push('','■アプリの「次の一手」',`・${nx.t}`);
   if((note||'').trim())L.push('','■ひとこと',note.trim());
@@ -776,6 +788,7 @@ function vCustQuick(id){const c=S.custs.find(x=>x.id===id);if(!c)return `<a clas
     <div class="field"><label for="q-feature">見た目・覚え方の特徴<span class="hint">名前を忘れたときの手がかり</span></label><input id="q-feature" value="${esc(c.feature||'')}" placeholder="例：丸眼鏡、声が大きい" autocomplete="off"></div>
     ${qBlock('seg',c,'c-')}${qBlock('from',c,'c-')}
     <div class="field"><label for="q-memo">話したこと<span class="hint">キーボードのマイクで話すと早いです</span></label><textarea id="q-memo" placeholder="例：芋焼酎が好き。来月また同僚と来る">${esc(c.memo||'')}</textarea></div>
+    ${(c.visits||[]).includes(today())?viaChips(c,today()):''}
     <p class="note" id="quick-st">名刺の写真は保存済みです。名前はあとからでも入れられます。</p>
     <div class="btns"><a class="btn" href="#/cust/${c.id}" data-done>完了</a><button class="btn ghost" data-act="cardSnap">続けて次の名刺</button></div></div>`;}
 function vCustDetail(id){const c=S.custs.find(x=>x.id===id);
@@ -785,6 +798,7 @@ function vCustDetail(id){const c=S.custs.find(x=>x.id===id);
   <div class="chead">${avatar(c,true)}<div><h1>${esc(c.name)}${c.kana?`<span class="muted" style="font-size:13px;font-weight:400;margin-left:6px">${esc(c.kana)}</span>`:''}</h1>
     <div class="sb">${esc([c.company,c.title].filter(Boolean).join('　'))}</div><div class="sb">最後に会った日：${agoLabel(lastSeen(c))}　来店${vs.length}回</div></div></div>
   <div class="btns" style="margin-bottom:12px"><button class="btn ${todayIn?'ghost':''}" data-act="visit" data-id="${c.id}">${todayIn?'今日の来店を取り消す':'今日来店した'}</button><a class="btn ghost" href="#/entry/talk/new/${c.id}">この方の会話メモ</a></div>
+  ${todayIn?`<div class="panel">${viaChips(c,today())}</div>`:''}
   ${c.hasPhoto?`<div class="panel"><h3>名刺・写真</h3><img class="photo" alt="${esc(c.name)}さんの名刺・写真" data-photo-full="${c.id}"><button class="btn ghost small" data-act="delPhoto" data-id="${c.id}">写真を削除</button></div>`:''}
   ${custForm(c)}
   <div class="panel"><h3>来店の記録<small>${vs.length}回</small></h3>${vs.length?`<div class="vlist">${vs.slice().reverse().map(d=>`<span>${d.replace(/-/g,'/')}${(c.visits||[]).includes(d)?`<button data-act="unvisit" data-id="${c.id}" data-date="${d}" aria-label="${d}の来店を消す">×</button>`:''}</span>`).join('')}</div>`:'<p class="note" style="margin:0">「今日来店した」を押すか、この方の会話メモを書くと記録されます。</p>'}</div>
@@ -855,6 +869,18 @@ function vExpForm(id,tplKey){const isNew=id==='new',x=isNew?Object.assign({id:''
     ${isNew?'':`<button class="btn danger block" style="margin-top:10px" data-act="delExp" data-id="${x.id}">この施策を削除</button>`}</div>`;}
 
 /* ============ 記録 ============ */
+function vClose(){const date=R[1]||bizDate(),e=S.days[date]||{},d=toDate(date),m=date.slice(0,7);
+  const done=monthEntries(m).filter(x=>x.sales!=null).length,biz=S.settings.bizDays||26,vis=S.custs.filter(c=>(c.visits||[]).includes(date)).length;
+  return `<a class="back" href="#/home">‹ ホーム</a>${demoBar()}<div class="phead"><h1>今日の締め</h1><p>閉店後に20秒。売上と客数、今日いちばんよかったことを残します。</p></div>
+  <div class="panel" data-form="close"><h3>${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）<small>入力すると自動で保存</small></h3>
+    <input type="hidden" id="cl-date" value="${date}">
+    <div class="grid2"><div class="field"><label for="cl-sales">売上（円）</label><input id="cl-sales" type="number" inputmode="numeric" value="${e.sales??''}" placeholder="例：152000"></div>
+    <div class="field"><label for="cl-guests">客数（人）</label><input id="cl-guests" type="number" inputmode="numeric" value="${e.guests??''}" placeholder="例：24"></div></div>
+    <div class="field"><label for="cl-good">今日のいい話<span class="hint">キーボードのマイクで一言</span></label><textarea id="cl-good" placeholder="例：日南の方が同僚を3人連れてきてくれた">${esc(e.good||'')}</textarea></div>
+    <p class="note" id="close-st">${e.sales!=null?'この日は記録済みです。直すと自動で保存されます。':'売上を入れた時点で自動で保存されます。'}</p>
+    <div class="btns"><a class="btn" href="#/home">完了</a><a class="btn ghost" href="#/entry/sales/${date}">組数・天気も入れる</a></div></div>
+  <div class="panel"><h3>今月の入力<small>${m.replace('-','年')}月</small></h3><p style="margin:0;font-size:15px"><b style="font-size:22px" id="close-done">${done}</b>日 入力済み（月の営業日 ${biz}日）</p>
+    <p class="note">今日来店を記録したお客様：${vis}人。お客様のページで「今日来店した」を押すと、来たきっかけも1タップで残せます。</p></div>`;}
 function vEntry(tab,arg,arg2){
   if(!['talk','cust','sales'].includes(tab))tab=pref.entryTab||'talk';if(pref.entryTab!==tab){pref.entryTab=tab;savePref();}
   const seg=`<div class="seg" role="tablist">${[['talk','会話メモ'],['cust','名刺・お客様'],['sales','今日の売上']].map(([k,l])=>`<a href="#/entry/${k}" class="${tab===k?'on':''}" role="tab" aria-selected="${tab===k}">${l}</a>`).join('')}</div>`;
@@ -862,7 +888,7 @@ function vEntry(tab,arg,arg2){
   if(tab==='talk'){if(arg==='new'){presetCust=arg2||null;arg=null;}const t=arg?S.talks.find(x=>x.id===arg):null;
     return head+seg+talkForm(t)+`<p class="note" style="text-align:center" id="talk-count">今日は${S.talks.filter(x=>x.date===today()).length}組記録済みです。分析は「お客さん」の「会話の分析」で見られます。</p>`;}
   if(tab==='cust'){const c=arg?S.custs.find(x=>x.id===arg):null;return head+seg+(c?'':`<button class="btn block snap" data-act="cardSnap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>名刺を撮って登録</button><p class="note" style="text-align:center;margin:-4px 0 12px">名刺を撮るだけで登録できます。名前はあとからでも大丈夫です。</p>`)+custForm(c)+(c?`<a class="btn ghost block" href="#/cust/${c.id}">この方のページを開く</a>`:'')+`<p class="note" style="text-align:center">名刺を受け取ったら、その場で名前と見た目の特徴だけ入れておくと忘れません。</p>`;}
-  const date=arg||today(),e=S.days[date]||{},d=toDate(date),ex=!!S.days[date];
+  const date=arg||bizDate(),e=S.days[date]||{},d=toDate(date),ex=!!S.days[date];
   return head+seg+`<div class="panel" data-form="day"><h3>${d.getMonth()+1}月${d.getDate()}日（${WD[d.getDay()]}）の売上<small>入力すると自動で保存</small></h3>
     <div class="field"><label for="f-date">日付</label><input type="date" id="f-date" value="${date}" data-nosave></div>
     <div class="grid2"><div class="field"><label for="f-sales">売上（税込）</label><input type="number" inputmode="numeric" id="f-sales" value="${e.sales??''}" placeholder="185000"></div><div class="field"><label for="f-guests">客数</label><input type="number" inputmode="numeric" id="f-guests" value="${e.guests??''}" placeholder="42"></div></div>
@@ -929,11 +955,15 @@ const SAVERS={
     if(!id){if(!any)return;id=uid();form.dataset.id=id;R=['entry','talk',id];t.at=Date.now();}
     else{const old=S.talks.find(x=>x.id===id);t.at=old?old.at:Date.now();if(!any){remove('talks',id);form.dataset.id='';R=['entry','talk'];setSt('talk-st','空になったので削除しました');return;}}
     t.id=id;upsert('talks',t);setSt('talk-st','自動で保存しました');setSt('talk-count',`今日は${S.talks.filter(x=>x.date===today()).length}組記録済みです。分析は「お客さん」の「会話の分析」で見られます。`);},
+  close(){const date=val('cl-date'),old=S.days[date]||{},sales=nn(val('cl-sales'));if(!date)return;
+    if(sales==null&&old.sales==null){setSt('close-st','売上を入れた時点で自動で保存されます。');return;}
+    putDay(date,Object.assign({},old,{sales:sales??old.sales,guests:nn(val('cl-guests')),good:val('cl-good').trim()}));
+    const g=nn(val('cl-guests')),sl=sales??old.sales,cd=document.getElementById('close-done');if(cd)cd.textContent=monthEntries(date.slice(0,7)).filter(x=>x.sales!=null).length;setSt('close-st',g?`自動で保存しました。客単価 ${yen(sl/g)}`:'自動で保存しました。');},
   day(){const date=val('f-date'),sales=nn(val('f-sales')),guests=nn(val('f-guests'));if(!date)return;
     if(sales==null){setSt('day-st',S.days[date]?'売上が空欄のため、前の値のまま保存されています。':'売上を入れた時点で自動で保存されます。');return;}
     const ng=nn(val('f-new'));if(ng!=null&&guests!=null&&ng>guests){setSt('day-st','新規客数が客数より多くなっています。数字を確認してください。');return;}
     const w=[...document.querySelectorAll('input[data-q="weather"]:checked')].map(i=>i.value)[0]||'';
-    putDay(date,{sales,guests,groups:nn(val('f-groups')),newGuests:ng,weather:w,memo:val('f-memo').trim()});setSt('day-st',guests?`自動で保存しました。客単価 ${yen(sales/guests)}`:'自動で保存しました。');},
+    putDay(date,Object.assign({},S.days[date],{sales,guests,groups:nn(val('f-groups')),newGuests:ng,weather:w,memo:val('f-memo').trim()}));setSt('day-st',guests?`自動で保存しました。客単価 ${yen(sales/guests)}`:'自動で保存しました。');},
   quick(){const f=$('#quickform');if(!f)return;const old=S.custs.find(x=>x.id===f.dataset.id);if(!old)return;const typed=val('q-name').trim(),name=typed||old.name;
     upsert('custs',Object.assign({},old,{name,company:val('q-company').trim(),feature:val('q-feature').trim(),seg:picked('seg',f),from:picked('from',f),memo:val('q-memo').trim(),needName:!typed&&!!old.needName}));
     setSt('quick-st',typed?'自動で保存しました。':'自動で保存しました。お名前はあとからでも入れられます。');},
@@ -990,9 +1020,12 @@ document.addEventListener('click',async ev=>{const el=ev.target.closest('[data-a
     delCand(){const c=S.value.cands.slice(),r=c.splice(+el.dataset.i,1)[0];S.value=Object.assign({},S.value,{cands:c,adopted:r===S.value.adopted?null:S.value.adopted});saveAll();render();},
     copy(){const i=+el.dataset.i,t=TPL[i][1],fb=()=>{const pre=document.getElementById('tpl-'+i),r=document.createRange();r.selectNodeContents(pre);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('文章を選択しました。コピーしてください');};
       try{navigator.clipboard.writeText(t).then(()=>toast('コピーしました'),fb);}catch(e){fb();}},
+    via(){flushForms();const c=S.custs.find(x=>x.id===el.dataset.id);if(!c)return;const via=Object.assign({},c.via),d=el.dataset.date,v=el.dataset.v;
+      if(via[d]===v)delete via[d];else via[d]=v;upsert('custs',Object.assign({},c,{via}));
+      el.closest('.chips').querySelectorAll('[data-act="via"]').forEach(b=>{const on=via[d]===b.dataset.v;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});toast(via[d]?`きっかけ：${v}`:'きっかけを外しました');},
     visit(){flushForms();const c=S.custs.find(x=>x.id===el.dataset.id);if(!c)return;const v=new Set(c.visits||[]);if(v.has(today())){v.delete(today());toast('今日の来店を取り消しました');}else{v.add(today());toast('今日の来店を記録しました');}
-      upsert('custs',Object.assign({},c,{visits:[...v].sort()}));render();},
-    unvisit(){const c=S.custs.find(x=>x.id===el.dataset.id);if(!c)return;upsert('custs',Object.assign({},c,{visits:(c.visits||[]).filter(d=>d!==el.dataset.date)}));render();},
+      const via=Object.assign({},c.via);if(!v.has(today()))delete via[today()];upsert('custs',Object.assign({},c,{visits:[...v].sort(),via}));render();},
+    unvisit(){const c=S.custs.find(x=>x.id===el.dataset.id);if(!c)return;const via=Object.assign({},c.via);delete via[el.dataset.date];upsert('custs',Object.assign({},c,{visits:(c.visits||[]).filter(d=>d!==el.dataset.date),via}));render();},
     cardSnap(){flushForms();photoTarget='__new__';const i=$('#photo');i.setAttribute('capture','environment');i.click();},
     photo(){flushForms();$('#photo').removeAttribute('capture');const id=$('#custform')&&$('#custform').dataset.id;if(!id)return toast('先にお名前を入れてください');photoTarget=id;$('#photo').click();},
     async delPhoto(){if(!await ask('この写真を削除します。よろしいですか？','削除する',true))return;await idb.del(el.dataset.id);const c=S.custs.find(x=>x.id===el.dataset.id);if(c)upsert('custs',Object.assign({},c,{hasPhoto:false}));toast('写真を削除しました');render();},
@@ -1048,7 +1081,7 @@ $('#file').addEventListener('change',ev=>{const f=ev.target.files[0];if(!f)retur
     if(text.trim().startsWith('{')){const o=JSON.parse(text),D=o.data||o;if(!D.days&&!D.talks&&!D.hearings&&!D.custs)throw new Error('このアプリのバックアップではありません');
       const talks=(D.talks||[]).concat((D.hearings||[]).map(h=>({id:h.id||uid(),date:h.date,seg:{'宮崎好き・旅行経験':'宮崎好き・旅行','近隣の一般客':'ゆかりなし','その他':''}[h.seg]??h.seg,ch:h.ch,vis:h.vis,note:h.why||'',at:Date.now()})));
       if(!await ask(`売上${Object.keys(D.days||{}).length}日分、会話メモ${talks.length}組、お客様${(D.custs||[]).length}人、施策${(D.exps||[]).length}件を取り込みます。同じ記録は上書きされます。`,'取り込む'))return;
-      Object.assign(S.days,D.days||{});Object.assign(S.months,D.months||{});
+      Object.entries(D.days||{}).forEach(([d,v])=>{S.days[d]=Object.assign({},S.days[d],v);});Object.assign(S.months,D.months||{});
       const merge=(k,arr)=>{if(!Array.isArray(S[k]))S[k]=[];const m=new Map(S[k].map(x=>[x.id,x]));arr.forEach(x=>{if(!x||x.id==null)return;const cur=m.get(x.id);
         const nx=Object.assign({},cur||{},x);if(cur&&Array.isArray(cur.visits)&&Array.isArray(x.visits))nx.visits=[...new Set([...cur.visits,...x.visits])].sort();m.set(x.id,nx);});S[k]=[...m.values()];};
       merge('talks',talks);merge('exps',D.exps||[]);merge('custs',D.custs||[]);
@@ -1062,7 +1095,7 @@ $('#file').addEventListener('change',ev=>{const f=ev.target.files[0];if(!f)retur
     const c={date:ix('日付'),sales:ix('売上'),guests:ix('客数'),groups:ix('組数'),newGuests:ix('新規'),weather:ix('天気'),memo:ix('メモ')};if(c.date<0||c.sales<0)throw new Error('1行目に「日付」と「売上」の見出しが必要です');
     const add={};rows.slice(1).forEach(r=>{const d=normDate(r[c.date]),s=nn(r[c.sales]);if(!d||s==null)return;const g=k=>c[k]>=0?r[c[k]]:'';add[d]={sales:s,guests:nn(g('guests')),groups:nn(g('groups')),newGuests:nn(g('newGuests')),weather:(g('weather')||'').trim(),memo:(g('memo')||'').trim()};});
     const n=Object.keys(add).length;if(!n)throw new Error('読み取れる行がありませんでした。日付と売上の形式を確認してください');if(!await ask(`${n}日分の売上を取り込みます。同じ日付は上書きされます。`,'取り込む'))return;
-    Object.assign(S.days,add);saveAll();toast(`${n}日分を取り込みました`);render();}catch(err){toast('取り込めませんでした：'+err.message);}finally{ev.target.value='';}};rd.readAsText(f);});
+    Object.entries(add).forEach(([d,v])=>{S.days[d]=Object.assign({},S.days[d],v);});saveAll();toast(`${n}日分を取り込みました`);render();}catch(err){toast('取り込めませんでした：'+err.message);}finally{ev.target.value='';}};rd.readAsText(f);});
 function normDate(s){if(!s)return null;const m=String(s).trim().match(/^(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})/);return m?m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]):null;}
 function parseCSV(t){const rows=[];let row=[],cur='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}else if(c==='"')q=true;else if(c===','||c==='\t'){row.push(cur);cur='';}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cur);if(row.some(x=>x!==''))rows.push(row);row=[];cur='';}else cur+=c;}row.push(cur);if(row.some(x=>x!==''))rows.push(row);return rows;}
 
